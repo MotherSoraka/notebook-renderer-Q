@@ -1,0 +1,19 @@
+{
+  "name": "bold-ink",
+  "version": 1,
+  "description": "Bold and vibrant inks for high-contrast notes",
+  "extends": "_base",
+  "paper": {
+    "background": "#ffffff",
+    "lineColor": "#a0a0a0",
+    "marginColor": "#ff6b6b"
+  },
+  "sketch": {
+    "palette": "bold",
+    "seed": 999,
+    "roughness": 0.8,
+    "fillWeight": 1.8,
+    "ghostEnabled": true,
+    "ghostOpacity": 0.15
+  }
+}

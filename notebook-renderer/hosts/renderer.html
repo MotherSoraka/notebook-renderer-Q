@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notebook Renderer - Test Interface</title>
+  
+  <!-- Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Caveat:wght@400;600;700&family=Fira+Code:wght@400;500&family=Noto+Sans+JP:wght@400&display=swap" rel="stylesheet">
+  
+  <!-- Dependencies -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.0.0/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ 
+      startOnLoad: false,
+      theme: 'default',
+      look: 'handDrawn'
+    });
+    window.mermaid = mermaid;
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.min.js"></script>
+  
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      background: #1a1a1a;
+      color: #cdd6f4;
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* Header */
+    .header {
+      background: #1e1e2e;
+      padding: 15px 30px;
+      border-bottom: 1px solid #313244;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    
+    .header h1 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #f5a97f;
+    }
+    
+    .header-actions {
+      margin-left: auto;
+      display: flex;
+      gap: 10px;
+    }
+    
+    .btn {
+      padding: 8px 16px;
+      background: #313244;
+      border: 1px solid #45475a;
+      border-radius: 6px;
+      color: #cdd6f4;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn:hover {
+      background: #45475a;
+      border-color: #f5a97f;
+    }
+    
+    .btn-primary {
+      background: #f5a97f;
+      border-color: #f5a97f;
+      color: #1e1e2e;
+      font-weight: 600;
+    }
+    
+    .btn-primary:hover {
+      opacity: 0.9;
+    }
+    
+    /* Main Layout */
+    .main {
+      display: grid;
+      grid-template-columns: 400px 1fr;
+      flex: 1;
+      overflow: hidden;
+    }
+    
+    /* Sidebar */
+    .sidebar {
+      background: #1e1e2e;
+      border-right: 1px solid #313244;
+      overflow-y: auto;
+      padding: 20px;
+    }
+    
+    .section {
+      margin-bottom: 30px;
+    }
+    
+    .section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #6c7086;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+    
+    /* Preset Grid */
+    .preset-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    
+    .preset-chip {
+      padding: 10px 12px;
+      background: #313244;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: left;
+    }
+    
+    .preset-chip:hover {
+      border-color: #f5a97f33;
+      background: #313244aa;
+    }
+    
+    .preset-chip.active {
+      border-color: #f5a97f;
+      background: #f5a97f22;
+    }
+    
+    /* Controls */
+    .control-group {
+      margin-bottom: 15px;
+    }
+    
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      font-size: 12px;
+    }
+    
+    .control-value {
+      color: #6c7086;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+    }
+    
+    input[type="range"] {
+      width: 100%;
+      height: 4px;
+      background: #313244;
+      border-radius: 2px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+    
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      background: #f5a97f;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+    
+    select {
+      width: 100%;
+      padding: 8px;
+      background: #313244;
+      border: 1px solid #45475a;
+      border-radius: 6px;
+      color: #cdd6f4;
+      font-size: 12px;
+      cursor: pointer;
+      outline: none;
+    }
+    
+    select:focus {
+      border-color: #f5a97f;
+    }
+    
+    /* Toggle Switch */
+    .toggle-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+    }
+    
+    .toggle-label {
+      font-size: 12px;
+    }
+    
+    .toggle {
+      position: relative;
+      width: 36px;
+      height: 20px;
+      background: #313244;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    .toggle.on {
+      background: #f5a97f;
+    }
+    
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    
+    .toggle.on::after {
+      transform: translateX(16px);
+    }
+    
+    /* Editor */
+    .editor-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+    
+    .editor-tabs {
+      display: flex;
+      border-bottom: 1px solid #313244;
+      background: #1e1e2e;
+    }
+    
+    .tab-btn {
+      padding: 10px 20px;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: #6c7086;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .tab-btn.active {
+      color: #f5a97f;
+      border-bottom-color: #f5a97f;
+    }
+    
+    .tab-btn:hover:not(.active) {
+      color: #cdd6f4;
+    }
+    
+    .editor-content {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+    
+    .editor-pane {
+      flex: 1;
+      display: none;
+      flex-direction: column;
+    }
+    
+    .editor-pane.active {
+      display: flex;
+    }
+    
+    textarea {
+      flex: 1;
+      padding: 15px;
+      background: #181825;
+      border: none;
+      outline: none;
+      color: #cdd6f4;
+      font-family: 'Fira Code', monospace;
+      font-size: 13px;
+      resize: none;
+      line-height: 1.6;
+    }
+    
+    .preview-pane {
+      flex: 1;
+      overflow-y: auto;
+      padding: 30px;
+      background: #1a1a1a;
+    }
+    
+    /* Renderer Container */
+    #renderer-container {
+      width: 100%;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    
+    /* Debug Console */
+    .debug-console {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 150px;
+      background: #11111b;
+      border-top: 1px solid #313244;
+      overflow-y: auto;
+      padding: 10px 20px;
+      font-family: 'Fira Code', monospace;
+      font-size: 11px;
+      z-index: 1000;
+    }
+    
+    .log-entry {
+      padding: 3px 0;
+      border-bottom: 1px solid #1e1e2e;
+    }
+    
+    .log-entry.info { color: #89dceb; }
+    .log-entry.warn { color: #f9e2af; }
+    .log-entry.error { color: #f38ba8; }
+    
+    .main.with-debug {
+      margin-bottom: 150px;
+    }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: #313244;
+      border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: #45475a;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <h1>📓 Notebook Renderer</h1>
+    <span style="color: #6c7086; font-size: 12px;">Test & Debug Interface</span>
+    <div class="header-actions">
+      <button class="btn btn-primary" id="btn-render">▶ Render</button>
+      <button class="btn" id="btn-clear">Clear</button>
+      <button class="btn" id="btn-toggle-debug">Debug Logs</button>
+    </div>
+  </header>
+  
+  <!-- Main Content -->
+  <main class="main" id="main">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <!-- Presets Section -->
+      <div class="section">
+        <div class="section-title">Presets</div>
+        <div class="preset-grid" id="preset-grid">
+          <div class="preset-chip active" data-preset="blue-bic">Blue Bic</div>
+          <div class="preset-chip" data-preset="pencil-grid">Pencil Grid</div>
+          <div class="preset-chip" data-preset="journal-warm">Journal Warm</div>
+          <div class="preset-chip" data-preset="pastel-soft">Pastel Soft</div>
+          <div class="preset-chip" data-preset="bold-ink">Bold Ink</div>
+        </div>
+      </div>
+      
+      <!-- Format Section -->
+      <div class="section">
+        <div class="section-title">Output Format</div>
+        <select id="format-select">
+          <option value="A4">A4 Paper</option>
+          <option value="Letter">Letter</option>
+          <option value="phone">Phone Screen</option>
+          <option value="phoneSmall">Phone Small</option>
+          <option value="phoneLarge">Phone Large</option>
+          <option value="square">Square (1080x1080)</option>
+        </select>
+      </div>
+      
+      <!-- Grid Settings -->
+      <div class="section">
+        <div class="section-title">Grid & Typography</div>
+        
+        <div class="control-group">
+          <div class="control-label">
+            <span>Grid Size</span>
+            <span class="control-value" id="grid-val">32px</span>
+          </div>
+          <input type="range" id="grid-slider" min="20" max="60" value="32">
+        </div>
+        
+        <div class="control-group">
+          <div class="control-label">
+            <span>Font Size</span>
+            <span class="control-value" id="font-val">26px</span>
+          </div>
+          <input type="range" id="font-slider" min="16" max="40" value="26">
+        </div>
+        
+        <div class="control-group">
+          <div class="control-label">
+            <span>Vertical Offset</span>
+            <span class="control-value" id="offset-val">6px</span>
+          </div>
+          <input type="range" id="offset-slider" min="0" max="60" value="6">
+        </div>
+      </div>
+      
+      <!-- Features -->
+      <div class="section">
+        <div class="section-title">Features</div>
+        
+        <div class="toggle-row">
+          <span class="toggle-label">Grid Snapping</span>
+          <div class="toggle on" data-feature="gridSnap"></div>
+        </div>
+        
+        <div class="toggle-row">
+          <span class="toggle-label">Pagination</span>
+          <div class="toggle" data-feature="pagination"></div>
+        </div>
+        
+        <div class="toggle-row">
+          <span class="toggle-label">Mermaid Sketch</span>
+          <div class="toggle on" data-feature="mermaid"></div>
+        </div>
+        
+        <div class="toggle-row">
+          <span class="toggle-label">Auto RTL</span>
+          <div class="toggle on" data-feature="rtl"></div>
+        </div>
+      </div>
+      
+      <!-- Mermaid Settings -->
+      <div class="section">
+        <div class="section-title">Mermaid Sketch</div>
+        
+        <div class="control-group">
+          <div class="control-label">
+            <span>Roughness</span>
+            <span class="control-value" id="roughness-val">0.5</span>
+          </div>
+          <input type="range" id="roughness-slider" min="0" max="4" step="0.1" value="0.5">
+        </div>
+        
+        <div class="control-group">
+          <div class="control-label">
+            <span>Bowing</span>
+            <span class="control-value" id="bowing-val">3.0</span>
+          </div>
+          <input type="range" id="bowing-slider" min="0" max="6" step="0.2" value="3.0">
+        </div>
+        
+        <div class="control-group">
+          <label class="control-label">Color Palette</label>
+          <select id="palette-select">
+            <option value="pencil">Sketch Pencil</option>
+            <option value="pastel">Soft Pastel</option>
+            <option value="bold">Bold Ink</option>
+            <option value="ballpen">Ballpen Classic</option>
+            <option value="coloredPencil">12 Colored Pencils</option>
+          </select>
+        </div>
+      </div>
+    </aside>
+    
+    <!-- Editor & Preview -->
+    <div class="editor-container">
+      <div class="editor-tabs">
+        <button class="tab-btn active" data-tab="markdown">Markdown</button>
+        <button class="tab-btn" data-tab="mermaid">Mermaid</button>
+        <button class="tab-btn" data-tab="preview">Preview</button>
+      </div>
+      
+      <div class="editor-content">
+        <div class="editor-pane active" id="pane-markdown">
+          <textarea id="markdown-input" placeholder="Enter Markdown here...
+
+# Example Heading
+
+This is **bold** and this is *italic*.
+
+## Mermaid Diagram
+
+```mermaid
+flowchart TD
+    A[Start] --> B{Decision?}
+    B -->|Yes| C[Process]
+    B -->|No| D[End]
+```
+
+## Math
+
+```math
+E = mc^2
+```
+"></textarea>
+        </div>
+        
+        <div class="editor-pane" id="pane-mermaid">
+          <textarea id="mermaid-input" placeholder="Enter Mermaid diagram code...
+
+flowchart TD
+    A[Start] --> B{Is it working?}
+    B -->|Yes| C[Great!]
+    B -->|No| D[Debug]
+    D --> B
+    C --> E[Done]
+"></textarea>
+        </div>
+        
+        <div class="editor-pane preview-pane" id="pane-preview">
+          <div id="renderer-container"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+  
+  <!-- Debug Console -->
+  <div class="debug-console" id="debug-console" style="display: none;">
+    <div class="log-entry info">[System] Renderer initialized</div>
+  </div>
+  
+  <!-- Application Script -->
+  <script type="module">
+    import { PaperRenderer, MermaidSketchEngine, loadPreset } from '../core/index.js';
+    
+    let renderer = null;
+    let debugEnabled = true;
+    let currentPreset = 'blue-bic';
+    
+    // Logger
+    function log(message, type = 'info') {
+      if (!debugEnabled) return;
+      
+      const consoleEl = document.getElementById('debug-console');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      consoleEl.appendChild(entry);
+      consoleEl.scrollTop = consoleEl.scrollHeight;
+      
+      if (type === 'error') {
+        console.error(message);
+      } else if (type === 'warn') {
+        console.warn(message);
+      } else {
+        console.log(message);
+      }
+    }
+    
+    // Initialize renderer
+    async function initRenderer() {
+      log('Initializing renderer...');
+      
+      const container = document.getElementById('renderer-container');
+      
+      // Create paper renderer instance
+      renderer = new PaperRenderer(container, {
+        gridSize: 32,
+        fontSize: 26,
+        enableMermaid: true,
+        enableMath: true,
+        enableGridSnap: true,
+        enableRTL: true,
+      });
+      
+      // Apply initial preset
+      try {
+        await renderer.applyPreset(currentPreset);
+        log(`Applied preset: ${currentPreset}`);
+      } catch (err) {
+        log(`Preset error: ${err.message}`, 'warn');
+      }
+      
+      log('Renderer ready');
+    }
+    
+    // Render content
+    async function renderContent() {
+      log('Rendering content...', 'info');
+      
+      if (!renderer) {
+        log('Renderer not initialized', 'error');
+        return;
+      }
+      
+      const activeTab = document.querySelector('.tab-btn.active').dataset.tab;
+      
+      try {
+        if (activeTab === 'mermaid') {
+          const mermaidCode = document.getElementById('mermaid-input').value;
+          if (!mermaidCode.trim()) {
+            log('No mermaid code entered', 'warn');
+            return;
+          }
+          const html = `<div class="mermaid">${mermaidCode}</div>`;
+          await renderer.renderHTML(html);
+          log('Mermaid diagram rendered');
+        } else {
+          const markdown = document.getElementById('markdown-input').value;
+          if (!markdown.trim()) {
+            log('No markdown entered', 'warn');
+            return;
+          }
+          await renderer.renderMarkdown(markdown);
+          log('Markdown rendered');
+        }
+        
+        log('✓ Render complete', 'info');
+      } catch (err) {
+        log(`✗ Render error: ${err.message}`, 'error');
+        console.error(err);
+      }
+    }
+    
+    // Clear content
+    function clearContent() {
+      const container = document.getElementById('renderer-container');
+      container.innerHTML = '';
+      if (renderer) {
+        renderer.pages = [];
+      }
+      log('Content cleared');
+    }
+    
+    // Apply preset
+    async function applyPreset(presetName) {
+      if (!renderer) return;
+      
+      log(`Loading preset: ${presetName}...`);
+      try {
+        await renderer.applyPreset(presetName);
+        currentPreset = presetName;
+        log(`✓ Preset applied: ${presetName}`);
+        await renderContent();
+      } catch (err) {
+        log(`✗ Preset error: ${err.message}`, 'error');
+      }
+    }
+    
+    // Event Listeners
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Initialize renderer
+      await initRenderer();
+      
+      // Tab switching
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+          document.querySelectorAll('.editor-pane').forEach(p => p.classList.remove('active'));
+          
+          btn.classList.add('active');
+          document.getElementById(`pane-${btn.dataset.tab}`).classList.add('active');
+        });
+      });
+      
+      // Render button
+      document.getElementById('btn-render').addEventListener('click', renderContent);
+      
+      // Clear button
+      document.getElementById('btn-clear').addEventListener('click', clearContent);
+      
+      // Debug toggle
+      document.getElementById('btn-toggle-debug').addEventListener('click', () => {
+        debugEnabled = !debugEnabled;
+        const consoleEl = document.getElementById('debug-console');
+        const mainEl = document.getElementById('main');
+        
+        if (debugEnabled) {
+          consoleEl.style.display = 'block';
+          mainEl.classList.add('with-debug');
+          log('Debug console enabled');
+        } else {
+          consoleEl.style.display = 'none';
+          mainEl.classList.remove('with-debug');
+        }
+      });
+      
+      // Preset selection
+      document.querySelectorAll('.preset-chip').forEach(chip => {
+        chip.addEventListener('click', async () => {
+          document.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('active'));
+          chip.classList.add('active');
+          
+          const presetName = chip.dataset.preset;
+          await applyPreset(presetName);
+        });
+      });
+      
+      // Grid slider
+      document.getElementById('grid-slider').addEventListener('input', (e) => {
+        const value = parseInt(e.target.value);
+        document.getElementById('grid-val').textContent = `${value}px`;
+        if (renderer) {
+          renderer.configure({ gridSize: value });
+          log(`Grid size: ${value}px`);
+        }
+      });
+      
+      // Font slider
+      document.getElementById('font-slider').addEventListener('input', (e) => {
+        const value = parseInt(e.target.value);
+        document.getElementById('font-val').textContent = `${value}px`;
+        if (renderer) {
+          renderer.configure({ fontSize: value });
+          log(`Font size: ${value}px`);
+        }
+      });
+      
+      // Offset slider
+      document.getElementById('offset-slider').addEventListener('input', (e) => {
+        const value = parseInt(e.target.value);
+        document.getElementById('offset-val').textContent = `${value}px`;
+        if (renderer) {
+          renderer.configure({ verticalOffset: value });
+          log(`Vertical offset: ${value}px`);
+        }
+      });
+      
+      // Roughness slider
+      document.getElementById('roughness-slider').addEventListener('input', (e) => {
+        const value = parseFloat(e.target.value);
+        document.getElementById('roughness-val').textContent = value.toFixed(1);
+        if (renderer && renderer.sketchEngine) {
+          renderer.sketchEngine.configure({ outRoughness: value });
+          log(`Mermaid roughness: ${value.toFixed(1)}`);
+        }
+      });
+      
+      // Bowing slider
+      document.getElementById('bowing-slider').addEventListener('input', (e) => {
+        const value = parseFloat(e.target.value);
+        document.getElementById('bowing-val').textContent = value.toFixed(1);
+        if (renderer && renderer.sketchEngine) {
+          renderer.sketchEngine.configure({ outBowing: value });
+          log(`Mermaid bowing: ${value.toFixed(1)}`);
+        }
+      });
+      
+      // Palette select
+      document.getElementById('palette-select').addEventListener('change', (e) => {
+        const palette = e.target.value;
+        if (renderer && renderer.sketchEngine) {
+          renderer.sketchEngine.setPalette(palette);
+          log(`Mermaid palette: ${palette}`);
+        }
+      });
+      
+      // Format select
+      document.getElementById('format-select').addEventListener('change', (e) => {
+        const format = e.target.value;
+        if (renderer) {
+          renderer.configure({ 
+            paginationFormat: format,
+            enablePagination: format !== 'A4' // Enable for non-default formats
+          });
+          log(`Output format: ${format}`);
+        }
+      });
+      
+      // Toggles
+      document.querySelectorAll('.toggle').forEach(toggle => {
+        toggle.addEventListener('click', () => {
+          toggle.classList.toggle('on');
+          const feature = toggle.dataset.feature;
+          const enabled = toggle.classList.contains('on');
+          
+          if (renderer) {
+            const configKey = feature === 'rtl' ? 'enableRTL' : 
+                             feature === 'gridSnap' ? 'enableGridSnap' :
+                             feature === 'mermaid' ? 'enableMermaid' :
+                             feature === 'pagination' ? 'enablePagination' : feature;
+            renderer.configure({ [configKey]: enabled });
+          }
+          
+          log(`Feature ${feature}: ${enabled ? 'ON' : 'OFF'}`);
+        });
+      });
+      
+      log('✓ Application loaded successfully');
+      log('Ready to render! Type in the editor and click Render');
+    });
+  </script>
+</body>
+</html>
