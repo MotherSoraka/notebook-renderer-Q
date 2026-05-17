@@ -1,0 +1,3717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mermaid Sketch Lab</title>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- EXTERNAL DEPENDENCIES                                      -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Kalam:wght@400;700&family=Patrick+Hand&family=Architects+Daughter&family=Shadows+Into+Light&family=Gloria+Hallelujah&family=Indie+Flower&family=Homemade+Apple&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&family=DM+Mono&display=swap" rel="stylesheet">
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- DESIGN TOKENS & STYLES                                     -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<style>
+  /* ── Root Tokens ─────────────────────────────────────────── */
+  :root {
+    --panel-bg:    #1e1e2e;
+    --panel-fg:    #cdd6f4;
+    --panel-muted: #6c7086;
+    --panel-border:#313244;
+    --panel-hover: #313244;
+    --accent:      #f5a97f;
+    --accent-dim:  #f5a97f33;
+    --canvas-bg:   #faf8f5;
+    --canvas-dots: #e8e4dd;
+    --surface:     #ffffff;
+    --radius:      8px;
+    --radius-sm:   5px;
+    --font-ui:     'DM Sans', sans-serif;
+    --font-mono:   'DM Mono', monospace;
+    --font-hand:   'Caveat', cursive;
+    --transition:  180ms ease;
+  }
+
+  /* ── Reset & Base ────────────────────────────────────────── */
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    height: 100%; overflow: hidden;
+    font-family: var(--font-ui);
+    background: var(--panel-bg);
+    color: var(--panel-fg);
+  }
+
+  /* ── Layout Shell ────────────────────────────────────────── */
+  .app {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    grid-template-rows: auto 1fr;
+    height: 100vh;
+  }
+
+  /* ── Header ──────────────────────────────────────────────── */
+  .header {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--panel-border);
+    background: var(--panel-bg);
+  }
+  .header-logo {
+    font-family: var(--font-hand);
+    font-size: 26px; font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -0.5px;
+  }
+  .header-sub {
+    font-size: 12px; color: var(--panel-muted);
+    letter-spacing: 0.5px; text-transform: uppercase;
+  }
+  .header-actions {
+    margin-left: auto; display: flex; gap: 8px;
+  }
+
+  /* ── Sidebar Panel ───────────────────────────────────────── */
+  .sidebar {
+    display: flex; flex-direction: column;
+    border-right: 1px solid var(--panel-border);
+    overflow: hidden;
+  }
+
+  /* Tabs */
+  .tab-bar {
+    display: flex; border-bottom: 1px solid var(--panel-border);
+    flex-shrink: 0;
+  }
+  .tab-btn {
+    flex: 1; padding: 10px 0;
+    background: none; border: none; color: var(--panel-muted);
+    font: 500 12px/1 var(--font-ui);
+    letter-spacing: 0.4px; text-transform: uppercase;
+    cursor: pointer; transition: color var(--transition), box-shadow var(--transition);
+    position: relative;
+  }
+  .tab-btn.active {
+    color: var(--accent);
+    box-shadow: inset 0 -2px 0 var(--accent);
+  }
+  .tab-btn:hover:not(.active) { color: var(--panel-fg); }
+
+  /* Tab Panels */
+  .tab-panel { display: none; flex: 1; overflow-y: auto; }
+  .tab-panel.active { display: flex; flex-direction: column; }
+
+  .panel-section {
+    padding: 16px;
+    border-bottom: 1px solid var(--panel-border);
+  }
+  .panel-section:last-child { border-bottom: none; }
+  .section-title {
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 1px; text-transform: uppercase;
+    color: var(--panel-muted); margin-bottom: 10px;
+  }
+
+  /* ── Preset Grid ─────────────────────────────────────────── */
+  .preset-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .preset-chip {
+    padding: 8px 10px;
+    background: var(--panel-hover);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    font: 400 12.5px/1.2 var(--font-ui);
+    color: var(--panel-fg);
+    cursor: pointer;
+    transition: all var(--transition);
+    text-align: left;
+  }
+  .preset-chip:hover { border-color: var(--accent-dim); }
+  .preset-chip.active {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+  }
+
+  /* ── Editor ──────────────────────────────────────────────── */
+  .editor-wrap { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .editor-textarea {
+    flex: 1; resize: none;
+    padding: 14px;
+    background: #181825;
+    border: none; outline: none;
+    color: #a6e3a1;
+    font: 13.5px/1.55 var(--font-mono);
+    tab-size: 2;
+  }
+  .editor-toolbar {
+    display: flex; gap: 6px; padding: 10px 14px;
+    border-top: 1px solid var(--panel-border);
+    flex-shrink: 0;
+  }
+
+  /* ── Settings Cards & Grid ───────────────────────────────── */
+  #panel-theme {
+    padding: 8px;
+    gap: 8px;
+    background: var(--panel-bg);
+  }
+  .settings-card {
+    background: #181825;
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+  }
+  .card-title {
+    font-size: 12px; font-weight: 600; color: var(--panel-fg);
+    margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .card-title .toggle { margin: 0; transform: scale(0.85); transform-origin: right center; }
+  .card-divider {
+    height: 1px; background: var(--panel-border);
+    margin: 8px -12px;
+  }
+  .card-subtitle {
+    font-size: 9.5px; font-weight: 700; color: var(--accent);
+    letter-spacing: 0.5px; text-transform: uppercase;
+    margin-bottom: 7px; display: flex; align-items: center; justify-content: space-between;
+  }
+
+  /* Controls */
+  .control-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 7px 10px;
+  }
+  .control-group.cols2 {
+    grid-template-columns: 1fr 1fr;
+  }
+  .setting-item { display: flex; flex-direction: column; }
+  .setting-item.full { grid-column: 1 / -1; }
+  .setting-item.span2 { grid-column: span 2; }
+
+  .setting-header {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    margin-bottom: 3px;
+  }
+  .setting-label { font-size: 10.5px; font-weight: 500; color: var(--panel-fg); }
+  .setting-val { font: 500 10px var(--font-mono); color: var(--panel-muted); }
+
+  /* Switches */
+  .switch-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 2px 0; margin-bottom: 5px;
+  }
+  .switch-row:last-child { margin-bottom: 0; }
+  .switch-label { font-size: 11.5px; font-weight: 500; color: var(--panel-fg); }
+  .switch-hint { font-size: 9.5px; color: var(--panel-muted); margin-top: 1px; }
+
+  /* Toggle */
+  .toggle {
+    position: relative; width: 32px; height: 18px;
+    background: var(--panel-border); border-radius: 9px;
+    cursor: pointer; transition: background var(--transition);
+    flex-shrink: 0; margin-left: 8px;
+  }
+  .toggle.on { background: var(--accent); }
+  .toggle::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 14px; height: 14px;
+    background: var(--surface); border-radius: 50%;
+    transition: transform var(--transition);
+  }
+  .toggle.on::after { transform: translateX(14px); }
+
+  /* Sliders */
+  input[type="range"] {
+    width: 100%; height: 3px;
+    -webkit-appearance: none; appearance: none;
+    background: var(--panel-border); border-radius: 2px;
+    outline: none; margin: 3px 0;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 11px; height: 11px;
+    background: var(--accent); border-radius: 50%;
+    cursor: pointer; transition: transform var(--transition);
+  }
+  input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+  /* ── Buttons ─────────────────────────────────────────────── */
+  .btn {
+    padding: 7px 14px;
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius-sm);
+    background: var(--panel-hover);
+    color: var(--panel-fg);
+    font: 500 12px/1 var(--font-ui);
+    cursor: pointer;
+    transition: all var(--transition);
+    white-space: nowrap;
+  }
+  .btn:hover { border-color: var(--accent-dim); }
+  .btn-primary {
+    background: var(--accent);
+    color: var(--panel-bg);
+    border-color: var(--accent);
+    font-weight: 600;
+  }
+  .btn-primary:hover { opacity: 0.9; }
+
+  /* ── Canvas (Preview) ────────────────────────────────────── */
+  .canvas-area {
+    position: relative;
+    overflow: auto;
+    background-color: var(--canvas-bg);
+    background-image: radial-gradient(var(--canvas-dots) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+  .canvas-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100%;
+    padding: 40px;
+  }
+  .render-target {
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: 0 1px 6px #0001;
+    padding: 32px;
+    max-width: 100%;
+    transition: opacity var(--transition);
+  }
+  .render-target svg {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Canvas status */
+  .canvas-status {
+    position: absolute; bottom: 14px; right: 18px;
+    font: 500 11px var(--font-mono);
+    color: var(--panel-muted);
+    background: var(--surface);
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    box-shadow: 0 1px 4px #0001;
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .canvas-status.visible { opacity: 1; }
+
+  /* ── Palette Preview ─────────────────────────────────────── */
+  .palette-row {
+    display: flex; gap: 3px; margin-top: 6px; flex-wrap: wrap;
+  }
+  .palette-swatch {
+    width: 18px; height: 18px;
+    border-radius: 3px; cursor: pointer;
+    border: 2px solid transparent;
+    transition: border-color var(--transition), transform var(--transition);
+  }
+  .palette-swatch:hover { transform: scale(1.15); }
+  .palette-swatch.ring { border-color: var(--accent); }
+  /* Palette dropdown */
+  .palette-select-row {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+  }
+  .palette-select-row label {
+    font-size: 11px; color: var(--panel-muted); white-space: nowrap;
+  }
+
+  /* ── Scrollbar ───────────────────────────────────────────── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--panel-border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--panel-muted); }
+
+  /* ── Select dropdown ─────────────────────────────────────── */
+  select.control-select {
+    width: 100%;
+    padding: 6px 8px;
+    margin-top: 6px;
+    background: var(--panel-hover);
+    color: var(--panel-fg);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius-sm);
+    font: 400 12.5px var(--font-ui);
+    cursor: pointer;
+    outline: none;
+  }
+  select.control-select:focus { border-color: var(--accent); }
+
+  /* ── Color input ─────────────────────────────────────────── */
+  input[type="color"] {
+    width: 32px; height: 22px;
+    background: var(--panel-hover);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    padding: 1px;
+  }
+
+  /* ── Render-target fit-modes ─────────────────────────────── */
+  .canvas-area.fit-active {
+    overflow: hidden;
+  }
+  .canvas-area.fit-active .canvas-inner {
+    padding: 0; min-height: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .render-target.fit-mode {
+    width: max-content; height: max-content;
+    max-width: none; margin: 0;
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
+  }
+  .render-target.fit-mode svg {
+    max-width: none !important;
+    width: auto !important;
+    height: auto !important;
+    display: block;
+  }
+
+  /* ── Canvas background toggle ────────────────────────────── */
+  .canvas-area.bg-paper {
+    --canvas-bg: #faf8f5;
+    background-image: radial-gradient(var(--canvas-dots) 1px, transparent 1px);
+  }
+  .canvas-area.bg-white {
+    --canvas-bg: #ffffff;
+    background-image: none;
+  }
+  .canvas-area.bg-dark {
+    --canvas-bg: #2b2b2b;
+    background-image: radial-gradient(#3a3a3a 1px, transparent 1px);
+  }
+  .canvas-area.bg-dark .render-target {
+    background: #353535;
+    box-shadow: 0 1px 8px #0003;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- APPLICATION SHELL                                          -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="app">
+
+  <!-- Header -->
+  <header class="header">
+    <span class="header-logo">Sketch Lab</span>
+    <span class="header-sub">Mermaid Hand-Drawn Engine</span>
+    <div class="header-actions">
+      <button class="btn" id="btn-fit-toggle" title="Auto-fit preview">⤢ Fit</button>
+      <button class="btn" id="btn-export-svg" title="Export SVG">⤓ SVG</button>
+      <button class="btn" id="btn-bg-toggle" title="Cycle canvas background">◐ BG</button>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="editor">Editor</button>
+      <button class="tab-btn" data-tab="presets">Presets</button>
+      <button class="tab-btn" data-tab="theme">Theme</button>
+    </div>
+
+    <!-- ── Editor Tab ──────────────────────────────────────── -->
+    <div class="tab-panel active" id="panel-editor">
+      <div class="editor-wrap">
+        <textarea class="editor-textarea" id="mermaid-input" spellcheck="false" placeholder="Type or paste mermaid code…"></textarea>
+        <div class="editor-toolbar">
+          <button class="btn-primary btn" id="btn-render">▶ Render</button>
+          <button class="btn" id="btn-clear">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Presets Tab ─────────────────────────────────────── -->
+    <div class="tab-panel" id="panel-presets">
+      <div class="panel-section" style="flex:1;">
+        <div class="section-title">Diagram Presets</div>
+        <div class="preset-grid" id="preset-grid"></div>
+      </div>
+    </div>
+
+    <!-- ── Theme Tab ───────────────────────────────────────── -->
+    <div class="tab-panel" id="panel-theme">
+
+      <!-- ─── Global & Colors Card ────────────────────────── -->
+      <div class="settings-card">
+        <div class="card-title">Global Settings</div>
+        <div class="switch-row">
+          <div><div class="switch-label">Hand-Drawn Engine</div><div class="switch-hint">Master toggle</div></div>
+          <div class="toggle on" data-key="enabled" id="toggle-enabled"></div>
+        </div>
+        <div class="switch-row" style="margin-bottom:4px;">
+          <div class="switch-label">Mermaid Base Theme</div>
+          <select id="mermaid-theme-select" class="control-select" style="width:auto;margin:0;padding:3px 6px;font-size:11px;" title="Mermaid base theme">
+            <option value="default">Default ★</option>
+            <option value="base">Base</option>
+            <option value="neutral">Neutral</option>
+            <option value="dark">Dark</option>
+            <option value="forest">Forest</option>
+          </select>
+        </div>
+
+        <div class="card-divider"></div>
+
+        <div class="card-subtitle">Colors</div>
+        <div class="switch-row" style="margin-bottom:5px;">
+          <div class="switch-label">Global Stroke Color</div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <input type="color" id="color-stroke" value="#1a47b8">
+            <div class="toggle on" data-key="forceStroke" id="toggle-forceStroke" title="Force: always use this stroke color. Off: keep Mermaid's stroke where it's chromatic."></div>
+            <span style="font-size:10px;color:var(--panel-muted);">Force</span>
+          </div>
+        </div>
+        <div class="switch-row" style="margin-bottom:5px;">
+          <div class="switch-label">Auto-Color Nodes</div>
+          <div class="toggle on" data-key="autoColor" id="toggle-autocolor"></div>
+        </div>
+        <div class="switch-row" style="margin-bottom:5px;">
+          <div class="switch-label">Pie Labels Outside</div>
+          <div class="toggle on" data-key="pieLabelsOutside" id="toggle-pieLabels"></div>
+        </div>
+        <div class="palette-select-row">
+          <label>Color Palette</label>
+          <select class="control-select" id="palette-select" style="margin:0;padding:3px 6px;font-size:11px;flex:1;">
+            <option value="pencil">Sketch Pencil</option>
+            <option value="pastel">Soft Pastel</option>
+            <option value="bold">Bold Ink</option>
+            <option value="ballpen">Ballpen Classic</option>
+            <option value="coloredPencil">12 Colored Pencils</option>
+          </select>
+        </div>
+        <div class="palette-row" id="palette-preview"></div>
+      </div>
+
+      <!-- ─── Typography Card ─────────────────────────────── -->
+      <div class="settings-card">
+        <div class="card-title">
+          Typography
+          <div class="toggle on" data-key="handFont" id="toggle-font"></div>
+        </div>
+        <div class="control-group cols2">
+          <div class="setting-item full">
+            <select class="control-select" id="select-font" style="margin-top:0;font-size:11.5px;">
+              <option value="'Caveat', cursive">Caveat</option>
+              <option value="'Kalam', cursive">Kalam</option>
+              <option value="'Patrick Hand', cursive">Patrick Hand</option>
+              <option value="'Architects Daughter', cursive">Architects Daughter</option>
+              <option value="'Shadows Into Light', cursive">Shadows Into Light</option>
+              <option value="'Gloria Hallelujah', cursive">Gloria Hallelujah</option>
+              <option value="'Indie Flower', cursive">Indie Flower</option>
+              <option value="'Homemade Apple', cursive">Homemade Apple</option>
+              <option value="'DM Sans', sans-serif">DM Sans (clean)</option>
+            </select>
+          </div>
+          <div class="setting-item full">
+            <div class="setting-header">
+              <span class="setting-label">Font Size Scale</span>
+              <span class="setting-val" id="val-fontScale">1.15</span>
+            </div>
+            <input type="range" id="slider-fontScale" min="0.7" max="1.6" step="0.05" value="1.15">
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── Outlines Card ───────────────────────────────── -->
+      <div class="settings-card">
+        <div class="card-title">Outlines</div>
+        <div class="control-group" style="margin-top:0;">
+          <div class="setting-item">
+            <div class="setting-header">
+              <span class="setting-label">Roughness</span>
+              <span class="setting-val" id="val-outRoughness">1.8</span>
+            </div>
+            <input type="range" id="slider-outRoughness" min="0" max="4" step="0.1" value="1.8">
+          </div>
+          <div class="setting-item">
+            <div class="setting-header">
+              <span class="setting-label">Bowing</span>
+              <span class="setting-val" id="val-outBowing">2.0</span>
+            </div>
+            <input type="range" id="slider-outBowing" min="0" max="6" step="0.2" value="2">
+          </div>
+          <div class="setting-item">
+            <div class="setting-header">
+              <span class="setting-label">Stroke W.</span>
+              <span class="setting-val" id="val-strokeWidth">1.6</span>
+            </div>
+            <input type="range" id="slider-strokeWidth" min="0.5" max="4" step="0.1" value="1.6">
+          </div>
+          <div class="setting-item">
+            <div class="setting-header">
+              <span class="setting-label">Wobble Amp</span>
+              <span class="setting-val" id="val-wobbleAmp">2.0</span>
+            </div>
+            <input type="range" id="slider-wobbleAmp" min="0" max="8" step="0.5" value="2.0">
+          </div>
+          <div class="setting-item">
+            <div class="setting-header">
+              <span class="setting-label">Wobble Freq</span>
+              <span class="setting-val" id="val-wobbleFreq">0.04</span>
+            </div>
+            <input type="range" id="slider-wobbleFreq" min="0.01" max="0.1" step="0.01" value="0.04">
+          </div>
+        </div>
+
+        <div class="card-divider"></div>
+        <div class="card-subtitle">
+          Texture & Grain
+          <div style="display:flex;gap:4px;flex-wrap:wrap;" id="outline-tex-chips"></div>
+        </div>
+        <div class="control-group" style="margin-top:0;">
+          <div class="setting-item">
+            <div class="setting-header">
+              <span class="setting-label">Grain</span>
+              <span class="setting-val" id="val-outGrain">0.60</span>
+            </div>
+            <input type="range" id="slider-outGrain" min="0" max="2" step="0.05" value="0.6">
+          </div>
+          <div class="setting-item">
+            <div class="setting-header">
+              <span class="setting-label">AA Blur</span>
+              <span class="setting-val" id="val-outBlur">0.15</span>
+            </div>
+            <input type="range" id="slider-outBlur" min="0" max="1.2" step="0.05" value="0.15">
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── Fills & Hachures Card ───────────────────────── -->
+      <div class="settings-card">
+        <div class="card-title">
+          Fills & Hachures
+          <div class="toggle on" data-key="hachure" id="toggle-hachure"></div>
+        </div>
+
+        <div class="card-subtitle">
+          Fill Style
+          <div style="display:flex;gap:4px;flex-wrap:wrap;" id="fill-style-chips"></div>
+        </div>
+
+        <div class="control-group" style="margin-top:0;">
+          <div class="setting-item">
+            <div class="setting-header">
+              <span class="setting-label">Gap</span>
+              <span class="setting-val" id="val-hachureGap">5.0</span>
+            </div>
+            <input type="range" id="slider-hachureGap" min="2" max="14" step="0.5" value="5">
+          </div>
+          <div class="setting-item">
+            <div class="setting-header">
+              <span class="setting-label">Angle</span>
+              <span class="setting-val" id="val-hachureAngle">-41</span>
+            </div>
+            <input type="range" id="slider-hachureAngle" min="-90" max="90" step="1" value="-41">
+          </div>
+          <div class="setting-item">
+            <div class="setting-header">
+              <span class="setting-label">Roughness</span>
+              <span class="setting-val" id="val-hatRoughness">1.4</span>
+            </div>
+            <input type="range" id="slider-hatRoughness" min="0" max="4" step="0.1" value="1.4">
+          </div>
+          <div class="setting-item">
+            <div class="setting-header">
+              <span class="setting-label">Bowing</span>
+              <span class="setting-val" id="val-hatBowing">1.0</span>
+            </div>
+            <input type="range" id="slider-hatBowing" min="0" max="6" step="0.2" value="1">
+          </div>
+          <div class="setting-item">
+            <div class="setting-header">
+              <span class="setting-label">Weight</span>
+              <span class="setting-val" id="val-fillWeight">1.0</span>
+            </div>
+            <input type="range" id="slider-fillWeight" min="0.3" max="3" step="0.1" value="1">
+          </div>
+          <div class="setting-item">
+            <div class="setting-header">
+              <span class="setting-label">Opacity</span>
+              <span class="setting-val" id="val-fillOpacity">0.85</span>
+            </div>
+            <input type="range" id="slider-fillOpacity" min="0.2" max="1" step="0.05" value="0.85">
+          </div>
+          <div class="setting-item full">
+            <div class="setting-header">
+              <span class="setting-label">Opacity Jitter</span>
+              <span class="setting-val" id="val-fillJitter">0.35</span>
+            </div>
+            <input type="range" id="slider-fillJitter" min="0" max="0.95" step="0.05" value="0.35">
+          </div>
+        </div>
+
+        <div class="card-divider"></div>
+        <div class="card-subtitle">
+          Edge Bleed
+          <div class="toggle on" data-key="bleed" id="toggle-bleed" style="transform:scale(0.85);transform-origin:right center;"></div>
+        </div>
+        <div class="control-group cols2" style="margin-top:0;">
+          <div class="setting-item">
+            <div class="setting-header">
+              <span class="setting-label">Amount</span>
+              <span class="setting-val" id="val-bleed">2.5</span>
+            </div>
+            <input type="range" id="slider-bleed" min="0" max="10" step="0.2" value="2.5">
+          </div>
+          <div class="setting-item">
+            <div class="setting-header">
+              <span class="setting-label">Jitter</span>
+              <span class="setting-val" id="val-edgeJitter">0.8</span>
+            </div>
+            <input type="range" id="slider-edgeJitter" min="0" max="3" step="0.1" value="0.8">
+          </div>
+        </div>
+
+        <div class="card-divider"></div>
+        <div class="card-subtitle">
+          Texture & Grain
+          <div style="display:flex;gap:4px;flex-wrap:wrap;" id="hatch-tex-chips"></div>
+        </div>
+        <div class="control-group cols2" style="margin-top:0;">
+          <div class="setting-item">
+            <div class="setting-header">
+              <span class="setting-label">Grain</span>
+              <span class="setting-val" id="val-hatGrain">0.90</span>
+            </div>
+            <input type="range" id="slider-hatGrain" min="0" max="2" step="0.05" value="0.9">
+          </div>
+          <div class="setting-item">
+            <div class="setting-header">
+              <span class="setting-label">AA Blur</span>
+              <span class="setting-val" id="val-hatBlur">0.20</span>
+            </div>
+            <input type="range" id="slider-hatBlur" min="0" max="1.2" step="0.05" value="0.2">
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── XY Chart Card ──────────────────────────────── -->
+      <div class="settings-card">
+        <div class="card-title">XY Chart</div>
+        <div class="switch-row" style="margin-bottom:4px;">
+          <div>
+            <div class="switch-label">X-Axis Label Rotation</div>
+            <div class="switch-hint">0 = auto-detect overlap</div>
+          </div>
+          <select id="xychart-label-angle" class="control-select" style="width:auto;margin:0;padding:3px 6px;font-size:11px;">
+            <option value="0">Auto (detect overlap)</option>
+            <option value="20">20° ↘</option>
+            <option value="30">30° ↘</option>
+            <option value="45">45° ↘</option>
+            <option value="60">60° ↘</option>
+            <option value="90">90° ↘</option>
+            <option value="-20">20° ↙</option>
+            <option value="-30">30° ↙</option>
+            <option value="-45">45° ↙</option>
+            <option value="-60">60° ↙</option>
+            <option value="-90">90° ↙</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- ─── Ghost Lines Card ────────────────────────────── -->
+      <div class="settings-card">
+        <div class="card-title">
+          Ghost Lines
+          <div class="toggle on" data-key="ghostLines" id="toggle-ghost"></div>
+        </div>
+
+        <div class="control-group" style="margin-top:0;">
+          <div class="setting-item">
+            <div class="setting-header">
+              <span class="setting-label">Count</span>
+              <span class="setting-val" id="val-ghostCount">1</span>
+            </div>
+            <input type="range" id="slider-ghostCount" min="1" max="4" step="1" value="1">
+          </div>
+          <div class="setting-item">
+            <div class="setting-header">
+              <span class="setting-label">Offset</span>
+              <span class="setting-val" id="val-ghostOffset">2.0</span>
+            </div>
+            <input type="range" id="slider-ghostOffset" min="0" max="8" step="0.2" value="2.0">
+          </div>
+          <div class="setting-item">
+            <div class="setting-header">
+              <span class="setting-label">Roughness</span>
+              <span class="setting-val" id="val-ghostRoughness">2.5</span>
+            </div>
+            <input type="range" id="slider-ghostRoughness" min="0" max="6" step="0.1" value="2.5">
+          </div>
+          <div class="setting-item">
+            <div class="setting-header">
+              <span class="setting-label">Bowing</span>
+              <span class="setting-val" id="val-ghostBowing">3.0</span>
+            </div>
+            <input type="range" id="slider-ghostBowing" min="0" max="8" step="0.2" value="3.0">
+          </div>
+          <div class="setting-item">
+            <div class="setting-header">
+              <span class="setting-label">Width</span>
+              <span class="setting-val" id="val-ghostWidth">1.0</span>
+            </div>
+            <input type="range" id="slider-ghostWidth" min="0.2" max="3" step="0.1" value="1.0">
+          </div>
+          <div class="setting-item">
+            <div class="setting-header">
+              <span class="setting-label">Opacity</span>
+              <span class="setting-val" id="val-ghostOpacity">0.20</span>
+            </div>
+            <input type="range" id="slider-ghostOpacity" min="0.01" max="1" step="0.01" value="0.20">
+          </div>
+        </div>
+
+        <div class="card-divider"></div>
+        <div class="card-subtitle">
+          Texture & Grain
+          <div style="display:flex;gap:4px;flex-wrap:wrap;" id="ghost-tex-chips"></div>
+        </div>
+        <div class="control-group cols2" style="margin-top:0;">
+          <div class="setting-item">
+            <div class="setting-header">
+              <span class="setting-label">Grain</span>
+              <span class="setting-val" id="val-ghostGrain">0.80</span>
+            </div>
+            <input type="range" id="slider-ghostGrain" min="0" max="2" step="0.05" value="0.8">
+          </div>
+          <div class="setting-item">
+            <div class="setting-header">
+              <span class="setting-label">AA Blur</span>
+              <span class="setting-val" id="val-ghostBlur">0.20</span>
+            </div>
+            <input type="range" id="slider-ghostBlur" min="0" max="1.2" step="0.05" value="0.2">
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Canvas -->
+  <main class="canvas-area bg-paper" id="canvas-area">
+    <div class="canvas-inner">
+      <div class="render-target" id="render-target"></div>
+    </div>
+    <div class="canvas-status" id="canvas-status"></div>
+  </main>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- APPLICATION LOGIC                                          -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<script>
+/* =============================================================
+ *  MODULE 1 — THEME CONFIG  (Single Source of Truth)
+ * ============================================================= */
+const ThemeConfig = {
+  // ── Master ──────────────────────────────────────────────
+  enabled:       true,
+  mermaidTheme:  'default',     // default | neutral | dark | forest | base
+  pieLabelsOutside: true,
+
+  // ── Typography ──────────────────────────────────────────
+  handFont:      true,
+  fontFamily:    "'Caveat', cursive",
+  fontScale:     1.15,
+
+  // ── Stroke color ────────────────────────────────────────
+  strokeColor:   '#1a47b8',   // classic Bic blue ballpen
+  forceStroke:   true,        // always override Mermaid stroke with strokeColor
+
+  // ── Outlines (own roughness/bowing) ─────────────────────
+  outRoughness:  0.5,
+  outBowing:     3.0,
+  strokeWidth:   1.6,
+  outWobbleAmp:  2.0,           // Wobble displacement amplitude
+  outWobbleFreq: 0.04,          // Wobble frequency (wiggles per length)
+  outlineTex:    'ballpen',     // ballpen | pencil
+  outGrain:      0.60,          // pencil grain strength
+  outBlur:       0.00,          // anti-alias blur stdDev
+
+  // ── Hachures (own roughness/bowing) ─────────────────────
+  hachure:       true,
+  fillStyle:     'hachure',     // hachure | cross-hatch | zigzag | dots
+  hatRoughness:  2.0,
+  hatBowing:     3.6,
+  hachureGap:    5.0,
+  fillWeight:    2.3,
+  hachureAngle:  -41,
+  fillOpacity:   1.00,
+  fillJitter:    0.95,          // randomness in hachure stroke opacity
+  bleed:         true,
+  bleedAmount:   10.0,          // overshoot in px
+  edgeJitter:    3.0,           // boundary mask jitter
+  hatchTex:      'pencil',      // ballpen | pencil
+  hatGrain:      1.00,
+  hatBlur:       0.00,
+
+  // ── XY Chart ─────────────────────────────────────────────
+  xychartLabelAngle: 0,   // 0 = auto-detect, or degrees (e.g. 45)
+
+  // ── Ghost ───────────────────────────────────────────────
+  ghostLines:    true,
+  ghostCount:    1,
+  ghostOpacity:  0.61,
+  ghostOffset:   2.6,
+  ghostRoughness: 0.6,
+  ghostBowing:   3.0,
+  ghostWidth:    0.5,
+  ghostTex:      'pencil',
+  ghostGrain:    1.25,
+  ghostBlur:     0.00,
+
+  // ── Gantt ────────────────────────────────────────────────
+  ganttBarInflate: 0.35,   // fraction to inflate task bar height (0 = no change)
+
+  // ── Auto-color ──────────────────────────────────────────
+  autoColor:     true,
+
+  // ── Force stroke override ────────────────────────────────
+  forceStroke:   true,   // when true, always use strokeColor; when false, keep Mermaid strokes
+
+  /** Rough.js opts for OUTLINES (stroke only) */
+  buildOutlineOpts(overrides = {}) {
+    return {
+      roughness:       this.outRoughness,
+      bowing:          this.outBowing,
+      strokeWidth:     this.strokeWidth,
+      stroke:          this.strokeColor,
+      fill:            undefined,
+      disableMultiStroke: true,
+      ...overrides,
+    };
+  },
+
+  /** Rough.js opts for HACHURES (fill only) */
+  buildHachureOpts(overrides = {}) {
+    return {
+      roughness:       this.hatRoughness,
+      bowing:          this.hatBowing,
+      strokeWidth:     0.001,        // hide outline; we only want fill
+      stroke:          'transparent',
+      fillStyle:       this.fillStyle,
+      fillWeight:      this.fillWeight,
+      hachureAngle:    this.hachureAngle,
+      hachureGap:      this.hachureGap,
+      ...overrides,
+    };
+  },
+};
+
+/* =============================================================
+ *  MODULE 2 — COLOR PALETTES  (Tokenized & Extensible)
+ * ============================================================= */
+const Palettes = {
+  // Chalky colored-pencil tones
+  pencil: [
+    '#5B8DB8', '#C76B6B', '#6BAF6B', '#C4A94D',
+    '#8E6BA8', '#CC8844', '#5BA8A0', '#C46B8A',
+    '#7B9E5A', '#7A8CBB',
+  ],
+  pastel: [
+    '#A8D8EA', '#F3B0C3', '#C6E2B5', '#FFE5A0',
+    '#C3B1E1', '#FFDAC1', '#B5EAD7', '#FFB7B2',
+    '#D5C4A1', '#B8D4E3',
+  ],
+  bold: [
+    '#2176FF', '#E63946', '#2D936C', '#F9C74F',
+    '#7B2D8E', '#F77F00', '#17BEBB', '#EF476F',
+    '#606C38', '#457B9D',
+  ],
+  // Classic ballpen ink colors (4-color pen + common extras)
+  ballpen: [
+    '#1A47B8', // classic Bic blue
+    '#C8101E', // red ink
+    '#1A7A1A', // green ink
+    '#111111', // black ink
+    '#7B3FA0', // violet ballpen
+    '#C8660A', // orange ballpen
+    '#005F8E', // teal ballpen
+    '#8B1A1A', // dark red / maroon
+    '#1A5C1A', // dark green
+    '#2255CC', // lighter blue
+  ],
+  // Vivid 12-pack colored pencils (Faber-Castell / Staedtler style)
+  coloredPencil: [
+    '#E8312A', // scarlet red
+    '#F97316', // bright orange
+    '#FACC15', // cadmium yellow
+    '#84CC16', // yellow-green
+    '#22C55E', // grass green
+    '#06B6D4', // sky blue / cyan
+    '#3B82F6', // cobalt blue
+    '#6D28D9', // violet
+    '#EC4899', // magenta / hot pink
+    '#92400E', // burnt sienna / brown
+    '#6B7280', // slate grey
+    '#1C1917', // dark charcoal / black
+  ],
+  _active: 'pencil',
+  get colors() { return this[this._active]; },
+  getColor(i) { return this.colors[i % this.colors.length]; },
+};
+
+/* =============================================================
+ *  MODULE 3 — PRESET LIBRARY
+ * ============================================================= */
+const Presets = {
+  'Flowchart': `flowchart TD
+    A[Start] --> B{Decision?}
+    B -->|Yes| C[Process A]
+    B -->|No| D[Process B]
+    C --> E[Review]
+    D --> E
+    E --> F{Approved?}
+    F -->|Yes| G[Deploy]
+    F -->|No| B
+    G --> H[Done]`,
+
+  'Sequence': `sequenceDiagram
+    participant U as User
+    participant S as Server
+    participant D as Database
+    U->>S: Login Request
+    S->>D: Validate Credentials
+    D-->>S: User Record
+    alt Valid
+        S-->>U: 200 OK + Token
+        U->>S: Fetch Dashboard
+        S->>D: Query Data
+        D-->>S: Results
+        S-->>U: Dashboard Data
+    else Invalid
+        S-->>U: 401 Unauthorized
+    end`,
+
+  'Class': `classDiagram
+    class Animal {
+        +String name
+        +int age
+        +makeSound()
+    }
+    class Dog {
+        +String breed
+        +fetch()
+        +bark()
+    }
+    class Cat {
+        +bool indoor
+        +purr()
+        +scratch()
+    }
+    class Owner {
+        +String name
+        +adopt(Animal a)
+    }
+    Animal <|-- Dog
+    Animal <|-- Cat
+    Owner "1" --> "*" Animal : has`,
+
+  'State': `stateDiagram-v2
+    [*] --> Idle
+    Idle --> Loading : fetch
+    Loading --> Success : resolve
+    Loading --> Error : reject
+    Success --> Idle : reset
+    Error --> Loading : retry
+    Error --> Idle : dismiss
+    Success --> [*]`,
+
+  'ER Diagram': `erDiagram
+    CUSTOMER ||--o{ ORDER : places
+    ORDER ||--|{ LINE_ITEM : contains
+    PRODUCT ||--o{ LINE_ITEM : listed_in
+    CUSTOMER {
+        int id PK
+        string name
+        string email
+    }
+    ORDER {
+        int id PK
+        date created
+        string status
+    }
+    PRODUCT {
+        int id PK
+        string title
+        float price
+    }`,
+
+  'Pie Chart': `pie title Project Hours
+    "Design" : 25
+    "Frontend" : 35
+    "Backend" : 20
+    "Testing" : 12
+    "DevOps" : 8`,
+
+  'Bar Chart': `xychart-beta
+    title "Monthly Active Users"
+    x-axis ["Q1", "Q2", "Q3", "Q4", "Q5"]
+    y-axis "Users (thousands)"
+    bar [150, 230, 380, 520, 610]
+    line [150, 230, 380, 520, 610]`,
+
+  'Gantt': `gantt
+    title Sprint Timeline
+    dateFormat  YYYY-MM-DD
+    section Design
+    Wireframes      :a1, 2025-01-06, 4d
+    Mockups         :a2, after a1, 3d
+    section Dev
+    Frontend        :b1, after a2, 6d
+    Backend         :b2, after a2, 5d
+    Integration     :b3, after b1, 3d
+    section QA
+    Testing         :c1, after b3, 4d
+    Release         :milestone, after c1, 0d`,
+
+  'Mindmap': `mindmap
+  root((Project))
+    Planning
+      Goals
+      Timeline
+      Resources
+    Development
+      Frontend
+      Backend
+      Database
+    Operations
+      CI/CD
+      Monitoring
+      Security`,
+
+  'Journey': `journey
+    title My Working Day
+    section Morning
+      Wake up: 3: Me
+      Coffee: 5: Me
+      Commute: 2: Me, Bus
+    section Work
+      Stand-up: 4: Me, Team
+      Deep work: 5: Me
+      Lunch: 4: Me, Friend
+    section Evening
+      Exercise: 4: Me
+      Dinner: 5: Me, Partner
+      Read: 5: Me`,
+
+  'Git Graph': `gitGraph
+    commit
+    commit
+    branch feature-a
+    checkout feature-a
+    commit
+    commit
+    checkout main
+    branch feature-b
+    commit
+    checkout feature-a
+    commit
+    checkout main
+    merge feature-a
+    commit
+    checkout feature-b
+    commit
+    checkout main
+    merge feature-b
+    commit`,
+
+  'Quadrant': `quadrantChart
+    title Effort vs Impact
+    x-axis Low Effort --> High Effort
+    y-axis Low Impact --> High Impact
+    quadrant-1 Do First
+    quadrant-2 Schedule
+    quadrant-3 Delegate
+    quadrant-4 Eliminate
+    Feature A: [0.2, 0.8]
+    Feature B: [0.7, 0.9]
+    Feature C: [0.3, 0.3]
+    Feature D: [0.8, 0.2]
+    Feature E: [0.5, 0.6]`,
+
+  'Block': `block-beta
+  columns 3
+    a["Frontend"] b["API Gateway"] c["Backend"]
+    d["CDN"]:1 e["Load Balancer"]:1 f["Database"]:1
+    g["Cache"]:3`,
+
+  'Flowchart LR': `flowchart LR
+    Input-->|Parse| Tokenizer
+    Tokenizer-->|Tokens| Parser
+    Parser-->|AST| Transformer
+    Transformer-->|IR| CodeGen
+    CodeGen-->Output`,
+};
+
+/* =============================================================
+ *  MODULE 4 — SKETCH ENGINE  (The core post-processor)
+ * ============================================================= */
+const SketchEngine = {
+
+  /** Main entry: post-process an already-rendered mermaid SVG */
+  process(svgEl, displayScale = 1) {
+    if (!ThemeConfig.enabled || !svgEl) return;
+
+    // ── Pixel compensation: invert the display scale so strokes/filters
+    //     appear at consistent screen size regardless of diagram zoom ──
+    this._pxScale = 1 / Math.max(0.05, displayScale || 1);
+
+    // ── Inject reusable SVG filters into <defs> ──────────────
+    this._injectFilters(svgEl);
+
+    const rc = rough.svg(svgEl);
+    let colorIdx = 0;
+
+    // ── Detect mindmap root node shapes for special handling ──
+    const mindmapRootShapes = new Set();
+    this._detectMindmapRootShapes(svgEl, mindmapRootShapes);
+
+    // ── Gather all shape elements ────────────────────────────
+    const shapes = svgEl.querySelectorAll(
+      'rect, circle, ellipse, polygon, line, path'
+    );
+
+    const drawnComponents = new Map();
+
+    shapes.forEach(el => {
+      if (this._shouldSkip(el)) return;
+
+      const sig = this._getGeometrySignature(el);
+      const tracker = sig ? (drawnComponents.get(sig) || {}) : null;
+
+      const isShape   = this._isFilledShape(el);
+      const hasOrigStroke = this._getEffectiveStroke(el) !== 'none';
+
+      // Decide what to draw, respecting the tracker to prevent duplicates
+      const shouldDrawOutline = (isShape || hasOrigStroke) && (!tracker || !tracker.outline);
+      
+      const fillColor = this._resolveFill(el, colorIdx);
+      const hasFill   = fillColor !== 'transparent';
+      const shouldDrawFill = isShape && hasFill && (!tracker || !tracker.fill);
+
+      // Only advance palette index when we actually consumed a color slot
+      if (shouldDrawFill) colorIdx++;
+
+      const seed   = this._seedFrom(el);
+      const stroke = this._resolveStroke(el);
+
+      // ── Ghost (behind everything) ──────────────────────────
+      // Only draw ghosts once per shape geometry
+      if (shouldDrawOutline && ThemeConfig.ghostLines) {
+        const gCount = Math.max(1, ThemeConfig.ghostCount | 0);
+        const gOff   = this._px(ThemeConfig.ghostOffset);
+        const gWid   = this._px(ThemeConfig.ghostWidth);
+        for (let p = 0; p < gCount; p++) {
+          const ghostEl = this._drawMaybeDashedShape(rc, el, {
+            roughness: ThemeConfig.ghostRoughness,
+            bowing: ThemeConfig.ghostBowing,
+            strokeWidth: gWid,
+            stroke: ThemeConfig.strokeColor,
+            fill: undefined,
+            disableMultiStroke: true,
+            seed: seed + 42 + p * 13,
+          });
+          if (ghostEl) {
+            const ox = (Math.random() - 0.5) * gOff * 2;
+            const oy = (Math.random() - 0.5) * gOff * 2;
+            this._applyTransform(el, ghostEl, `translate(${ox},${oy})`);
+            ghostEl.style.opacity = ThemeConfig.ghostOpacity;
+            ghostEl.classList.add('sketch-ghost');
+            const filter = this._ghostFilterRef();
+            if (filter) ghostEl.setAttribute('filter', filter);
+            el.parentNode.insertBefore(ghostEl, el);
+          }
+        }
+      }
+
+      // ── Hachure layer (fill only, with bleed/clip) ─────────
+      if (shouldDrawFill) {
+        if (ThemeConfig.hachure) {
+          this._renderHachureLayer(rc, el, fillColor, seed, svgEl);
+        } else {
+          // Solid fill fallback (no hachure)
+          const solidEl = this._drawShape(rc, el, {
+            ...ThemeConfig.buildHachureOpts({ fill: fillColor, fillStyle: 'solid', seed }),
+          });
+          if (solidEl) {
+            this._applyTransform(el, solidEl);
+            solidEl.style.opacity = ThemeConfig.fillOpacity;
+            solidEl.classList.add('sketch-fill');
+            el.parentNode.insertBefore(solidEl, el);
+          }
+        }
+      }
+
+      // ── Outline layer (stroke only, single clean pass) ─────
+      if (shouldDrawOutline) {
+        const outlineEl = this._drawMaybeDashedShape(rc, el, ThemeConfig.buildOutlineOpts({
+          strokeWidth: this._px(ThemeConfig.strokeWidth),
+          stroke,
+          seed: seed + 17,
+        }));
+        if (outlineEl) {
+          this._applyTransform(el, outlineEl);
+          const filter = this._outlineFilterRef();
+          if (filter) outlineEl.setAttribute('filter', filter);
+          outlineEl.classList.add('sketch-shape');
+          el.parentNode.insertBefore(outlineEl, el);
+        }
+
+        // Reconstruct SVG markers as sketchy arrowheads (tied to outline drawing)
+        const hasMarker = this._hasMarker(el);
+        if (hasMarker) {
+          const markerEl = this._drawArrowMarkers(rc, el, {
+            stroke,
+            strokeWidth: this._px(ThemeConfig.strokeWidth),
+            seed: seed + 211,
+          });
+          if (markerEl) {
+            this._applyTransform(el, markerEl);
+            markerEl.classList.add('sketch-marker');
+            el.parentNode.insertBefore(markerEl, el);
+          }
+        }
+      }
+
+      // Update tracker state after drawing decisions have been made
+      if (tracker) {
+        if (shouldDrawFill) tracker.fill = true;
+        if (shouldDrawOutline) tracker.outline = true;
+        if (sig) drawnComponents.set(sig, tracker);
+      }
+
+      // Hide the original primitive after the sketch replacement is inserted.
+      el.style.setProperty('display', 'none', 'important');
+      el.setAttribute('data-sketch-hidden', 'true');
+
+      // ── FORCE-CLEAR mindmap root node fills ──────────────────
+      if (mindmapRootShapes.has(el)) {
+        el.style.setProperty('fill', 'transparent', 'important');
+        el.style.setProperty('fill-opacity', '0', 'important');
+        el.setAttribute('data-sketch-mindmap-root', 'true');
+      }
+    });
+
+    // ── Second pass: force-clear any remaining mindmap root shapes
+    // that may have been missed (overlapping background circles, etc.)
+    this._forceClearMindmapRoot(svgEl, mindmapRootShapes);
+
+    // ── Gantt: hide section fills & inject timeline rules ────
+    this._processGantt(svgEl);
+
+    // ── Expand viewBox to give text room (prevents clipping) ─
+    this._padViewBox(svgEl);
+
+    // ── Apply handwritten font & Readability ─────────────────
+    const fam = ThemeConfig.handFont ? ThemeConfig.fontFamily : null;
+    
+    // 1. SVG Text (sequence diagrams, pie charts, etc.)
+    svgEl.querySelectorAll('text, tspan').forEach(t => {
+      if (fam) { try { t.style.fontFamily = fam; } catch(e) {} }
+      if (ThemeConfig.handFont && t.tagName.toLowerCase() === 'text') {
+        const sz = parseFloat(getComputedStyle(t).fontSize) || 14;
+        t.style.fontSize = (sz * ThemeConfig.fontScale) + 'px';
+      }
+      
+      // Readability: Black text, white halo
+      t.style.setProperty('fill', '#111111', 'important');
+      t.style.setProperty('stroke', '#ffffff', 'important');
+      t.style.setProperty('stroke-width', '3px', 'important');
+      t.style.setProperty('stroke-linejoin', 'round', 'important');
+      t.style.setProperty('paint-order', 'stroke fill', 'important');
+    });
+
+    // 2. HTML Text (Flowchart labels inside foreignObject)
+    svgEl.querySelectorAll('foreignObject, foreignObject *').forEach(t => {
+      if (fam) { try { t.style.fontFamily = fam; } catch(e) {} }
+      
+      // text-shadow creates a halo effect for HTML text
+      t.style.setProperty('color', '#111111', 'important');
+      t.style.setProperty('text-shadow', '0 0 2px #ffffff, -1px -1px 0 #ffffff, 1px -1px 0 #ffffff, -1px 1px 0 #ffffff, 1px 1px 0 #ffffff', 'important');
+    });
+  },
+
+  /** Render a hachure fill layer with optional bleed and edge jitter. */
+  _renderHachureLayer(rc, el, fillColor, seed, svgEl) {
+    const opts = ThemeConfig.buildHachureOpts({
+      fillWeight:   this._px(ThemeConfig.fillWeight),
+      hachureGap:   this._px(ThemeConfig.hachureGap),
+      fill: fillColor,
+      seed,
+    });
+
+    const hachureEl = this._drawShape(rc, el, opts);
+    if (!hachureEl) return;
+
+    this._applyTransform(el, hachureEl);
+
+    // Apply Opacity Jitter to individual hachure strokes
+    if (ThemeConfig.fillJitter > 0) {
+      hachureEl.querySelectorAll('path').forEach(p => {
+        const d = p.getAttribute('d');
+        if (!d) return;
+        // Split combined path into individual line segments (by 'M' or 'm')
+        const segments = d.split(/(?=[Mm])/).filter(s => s.trim().length > 0);
+        if (segments.length > 1) {
+          const fragment = document.createDocumentFragment();
+          segments.forEach(seg => {
+            const clone = p.cloneNode(false);
+            clone.setAttribute('d', seg);
+            // Randomly reduce opacity based on jitter value
+            const op = 1.0 - (Math.random() * ThemeConfig.fillJitter);
+            clone.style.opacity = op;
+            fragment.appendChild(clone);
+          });
+          p.parentNode.replaceChild(fragment, p);
+        }
+      });
+    }
+
+    // Wrap in a <g> so we can apply clip + filter together
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.classList.add('sketch-fill');
+    g.style.opacity = ThemeConfig.fillOpacity;
+
+    // Apply hachure filter (pencil grain + blur)
+    const filt = this._hatchFilterRef();
+    if (filt) g.setAttribute('filter', filt);
+
+    // Bleed: clip to a jittered version of the original boundary.
+    const bleedAmt = ThemeConfig.bleed ? this._px(ThemeConfig.bleedAmount) : 0;
+    const edgeJit  = this._px(ThemeConfig.edgeJitter);
+    if (bleedAmt > 0) {
+      const clipId = this._createBleedClip(el, svgEl, seed, bleedAmt, edgeJit);
+      if (clipId) g.setAttribute('clip-path', `url(#${clipId})`);
+    } else {
+      const clipId = this._createTightClip(el, svgEl, seed);
+      if (clipId) g.setAttribute('clip-path', `url(#${clipId})`);
+    }
+
+    g.appendChild(hachureEl);
+    el.parentNode.insertBefore(g, el);
+  },
+
+  /** Build a clip-path that mirrors the original element (no bleed). */
+  _createTightClip(el, svgEl, seed) {
+    const defs = this._ensureDefs(svgEl);
+    const id = `clip-tight-${seed}-${Math.random().toString(36).slice(2,7)}`;
+    const cp = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+    cp.setAttribute('id', id);
+    const clone = el.cloneNode(false);
+    clone.removeAttribute('style');
+    clone.removeAttribute('class');
+    cp.appendChild(clone);
+    defs.appendChild(cp);
+    return id;
+  },
+
+  /** Build a clip-path expanded by bleedAmount with edgeJitter randomness. */
+  _createBleedClip(el, svgEl, seed, bleedAmt, edgeJit) {
+    const defs = this._ensureDefs(svgEl);
+    const bbox = el.getBBox?.();
+    if (!bbox) return null;
+    const id = `clip-bleed-${seed}-${Math.random().toString(36).slice(2,7)}`;
+    const cp = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+    cp.setAttribute('id', id);
+
+    const b = bleedAmt;
+    const j = edgeJit;
+    const tag = el.tagName.toLowerCase();
+    let shape;
+
+    switch (tag) {
+      case 'rect': {
+        shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        const x = parseFloat(el.getAttribute('x')) || 0;
+        const y = parseFloat(el.getAttribute('y')) || 0;
+        const w = parseFloat(el.getAttribute('width')) || 0;
+        const h = parseFloat(el.getAttribute('height')) || 0;
+        const rx = parseFloat(el.getAttribute('rx')) || 0;
+        const jx = (Math.random() - 0.5) * j;
+        const jy = (Math.random() - 0.5) * j;
+        shape.setAttribute('x', x - b + jx);
+        shape.setAttribute('y', y - b + jy);
+        shape.setAttribute('width', w + b * 2);
+        shape.setAttribute('height', h + b * 2);
+        if (rx > 0) shape.setAttribute('rx', rx + b);
+        break;
+      }
+      case 'circle': {
+        shape = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        shape.setAttribute('cx', el.getAttribute('cx'));
+        shape.setAttribute('cy', el.getAttribute('cy'));
+        const r = parseFloat(el.getAttribute('r')) || 0;
+        shape.setAttribute('r', r + b);
+        break;
+      }
+      case 'ellipse': {
+        shape = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+        shape.setAttribute('cx', el.getAttribute('cx'));
+        shape.setAttribute('cy', el.getAttribute('cy'));
+        shape.setAttribute('rx', (parseFloat(el.getAttribute('rx')) || 0) + b);
+        shape.setAttribute('ry', (parseFloat(el.getAttribute('ry')) || 0) + b);
+        break;
+      }
+      case 'polygon': {
+        // Inflate polygon by moving each point outward from centroid.
+        const pts = (el.getAttribute('points') || '').trim().split(/[\s,]+/).map(Number);
+        const pairs = [];
+        for (let i = 0; i < pts.length; i += 2) pairs.push([pts[i], pts[i+1]]);
+        const cx = pairs.reduce((s, p) => s + p[0], 0) / pairs.length;
+        const cy = pairs.reduce((s, p) => s + p[1], 0) / pairs.length;
+        const inflated = pairs.map(([px, py]) => {
+          const dx = px - cx, dy = py - cy;
+          const len = Math.hypot(dx, dy) || 1;
+          return [
+            px + (dx / len) * b + (Math.random() - 0.5) * j,
+            py + (dy / len) * b + (Math.random() - 0.5) * j,
+          ];
+        });
+        shape = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        shape.setAttribute('points', inflated.map(p => p.join(',')).join(' '));
+        break;
+      }
+      default: {
+        // Fallback: bbox-based rect
+        shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        shape.setAttribute('x', bbox.x - b);
+        shape.setAttribute('y', bbox.y - b);
+        shape.setAttribute('width', bbox.width + b * 2);
+        shape.setAttribute('height', bbox.height + b * 2);
+      }
+    }
+
+    const origTransform = el.getAttribute('transform');
+    if (origTransform) {
+      shape.setAttribute('transform', origTransform);
+    }
+
+    cp.appendChild(shape);
+    defs.appendChild(cp);
+    return id;
+  },
+
+  _ensureDefs(svgEl) {
+    let defs = svgEl.querySelector('defs');
+    if (!defs) {
+      defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+      svgEl.insertBefore(defs, svgEl.firstChild);
+    }
+    return defs;
+  },
+
+  /** Inject reusable filter primitives into the SVG <defs>. */
+  _injectFilters(svgEl) {
+    const defs = this._ensureDefs(svgEl);
+
+    // Remove any previous sketch filters (fresh render)
+    defs.querySelectorAll('[data-sketch-filter]').forEach(f => f.remove());
+
+    // ── Outline filter ─────────────────────────────────────
+    const oBlur = ThemeConfig.outBlur;
+    const oGrain = ThemeConfig.outlineTex === 'pencil' ? ThemeConfig.outGrain : 0;
+    const oWobbleAmp = ThemeConfig.outWobbleAmp;
+    const oWobbleFreq = ThemeConfig.outWobbleFreq;
+    if (oBlur > 0 || oGrain > 0 || oWobbleAmp > 0) {
+      defs.insertAdjacentHTML('beforeend', this._buildFilter(
+        'sketch-filter-outline', oBlur, oGrain, oWobbleAmp, oWobbleFreq, 'outline'
+      ));
+    }
+
+    // ── Hachure filter ─────────────────────────────────────
+    const hBlur = ThemeConfig.hatBlur;
+    const hGrain = ThemeConfig.hatchTex === 'pencil' ? ThemeConfig.hatGrain : 0;
+    if (hBlur > 0 || hGrain > 0) {
+      defs.insertAdjacentHTML('beforeend', this._buildFilter(
+        'sketch-filter-hatch', hBlur, hGrain, 0, 0, 'hatch'
+      ));
+    }
+
+    // ── Ghost filter ───────────────────────────────────────
+    const gBlur = ThemeConfig.ghostBlur;
+    const gGrain = ThemeConfig.ghostTex === 'pencil' ? ThemeConfig.ghostGrain : 0;
+    if (gBlur > 0 || gGrain > 0) {
+      defs.insertAdjacentHTML('beforeend', this._buildFilter(
+        'sketch-filter-ghost', gBlur, gGrain, 0, 0, 'ghost'
+      ));
+    }
+  },
+
+  _buildFilter(id, blurAmt, grainAmt, wobbleAmp, wobbleFreq, kind) {
+    // Scale pixel-based filter params so they match screen size
+    const sBlur   = this._px(blurAmt);
+    const sWobble = this._px(wobbleAmp);
+    const sGrain  = this._px(grainAmt);
+    const grainScale = sGrain * 1.6;
+
+    // Expanded region prevents clipping when filters are scaled up for small diagrams
+    const parts = [`<filter id="${id}" data-sketch-filter="${kind}" x="-50%" y="-50%" width="200%" height="200%">`];
+    let currentInput = 'SourceGraphic';
+
+    // 1. Wobble stage (low freq, medium/high amp for squiggly lines)
+    if (sWobble > 0) {
+      parts.push(
+        `<feTurbulence type="fractalNoise" baseFrequency="${wobbleFreq}" numOctaves="3" seed="${Math.floor(Math.random()*99)}" result="wobbleNoise"/>`,
+        `<feDisplacementMap in="${currentInput}" in2="wobbleNoise" scale="${sWobble}" xChannelSelector="R" yChannelSelector="G" result="wobbled"/>`
+      );
+      currentInput = 'wobbled';
+    }
+
+    // 2. Grain stage (high freq, low amp for pencil texture)
+    if (sGrain > 0) {
+      const baseFreq = 0.7 + sGrain * 0.4;
+      parts.push(
+        `<feTurbulence type="fractalNoise" baseFrequency="${baseFreq}" numOctaves="2" seed="${Math.floor(Math.random()*99)}" result="grainNoise"/>`,
+        `<feDisplacementMap in="${currentInput}" in2="grainNoise" scale="${grainScale}" xChannelSelector="R" yChannelSelector="G" result="grained"/>`
+      );
+      currentInput = 'grained';
+    }
+
+    // 3. Blur stage (anti-aliasing)
+    if (sBlur > 0) {
+      parts.push(`<feGaussianBlur in="${currentInput}" stdDeviation="${sBlur}" result="blurred"/>`);
+      currentInput = 'blurred';
+    }
+
+    parts.push('</filter>');
+    return parts.join('');
+  },
+
+  _outlineFilterRef() {
+    const oBlur = ThemeConfig.outBlur;
+    const oGrain = ThemeConfig.outlineTex === 'pencil' ? ThemeConfig.outGrain : 0;
+    const oWobble = ThemeConfig.outWobbleAmp;
+    return (oBlur > 0 || oGrain > 0 || oWobble > 0) ? 'url(#sketch-filter-outline)' : null;
+  },
+
+  _hatchFilterRef() {
+    const hBlur = ThemeConfig.hatBlur;
+    const hGrain = ThemeConfig.hatchTex === 'pencil' ? ThemeConfig.hatGrain : 0;
+    return (hBlur > 0 || hGrain > 0) ? 'url(#sketch-filter-hatch)' : null;
+  },
+
+  _ghostFilterRef() {
+    const gBlur = ThemeConfig.ghostBlur;
+    const gGrain = ThemeConfig.ghostTex === 'pencil' ? ThemeConfig.ghostGrain : 0;
+    return (gBlur > 0 || gGrain > 0) ? 'url(#sketch-filter-ghost)' : null;
+  },
+
+  /** Expand the SVG viewBox by a padding factor to prevent font/sketch clipping. */
+  _padViewBox(svgEl) {
+    if (!svgEl) return;
+    // Ensure root SVG allows overflow (never strip internal clip-paths;
+    // Mermaid needs them for Gantt/Sequence bounds)
+    svgEl.setAttribute('overflow', 'visible');
+    svgEl.style.overflow = 'visible';
+
+    const vb = svgEl.getAttribute('viewBox');
+    if (!vb) return;
+    const parts = vb.split(/[ ,\t]+/).map(parseFloat);
+    if (parts.length < 4) return;
+    let [vx, vy, vw, vh] = parts;
+
+    // Scale-aware padding: when fontScale is large, give more room
+    const fontPad = ThemeConfig.handFont
+      ? Math.max(24, 20 * ThemeConfig.fontScale)
+      : 16;
+
+    vx -= fontPad;
+    vy -= fontPad;
+    vw += fontPad * 2;
+    vh += fontPad * 2;
+
+    svgEl.setAttribute('viewBox', `${vx} ${vy} ${vw} ${vh}`);
+  },
+
+  /** Reverse the processing (restore original SVG) */
+  restore(svgEl) {
+    if (!svgEl) return;
+    svgEl.querySelectorAll('.sketch-shape, .sketch-ghost, .sketch-fill, .sketch-marker')
+      .forEach(el => el.remove());
+    svgEl.querySelectorAll('[data-sketch-hidden]')
+      .forEach(el => { el.style.removeProperty('display'); el.removeAttribute('data-sketch-hidden'); });
+    
+    svgEl.querySelectorAll('[data-sketch-hidden-marker]')
+      .forEach(el => {
+        el.style.strokeOpacity = el.getAttribute('data-orig-stroke-opacity') || '';
+        el.style.fillOpacity = el.getAttribute('data-orig-fill-opacity') || '';
+        if (el.style.strokeOpacity === '') el.style.removeProperty('stroke-opacity');
+        if (el.style.fillOpacity === '') el.style.removeProperty('fill-opacity');
+        el.removeAttribute('data-sketch-hidden-marker');
+        el.removeAttribute('data-orig-stroke-opacity');
+        el.removeAttribute('data-orig-fill-opacity');
+      });
+
+    // Restore mindmap root nodes
+    svgEl.querySelectorAll('[data-sketch-mindmap-root], [data-sketch-mindmap-root-dup]')
+      .forEach(el => {
+        el.style.removeProperty('fill');
+        el.style.removeProperty('fill-opacity');
+        el.style.removeProperty('display');
+        el.removeAttribute('data-sketch-mindmap-root');
+        el.removeAttribute('data-sketch-mindmap-root-dup');
+      });
+
+    svgEl.querySelectorAll('text, tspan, foreignObject, foreignObject *')
+      .forEach(t => { 
+        t.style.fontFamily = ''; t.style.fontSize = ''; 
+        t.style.fill = ''; t.style.stroke = ''; t.style.strokeWidth = '';
+        t.style.strokeLinejoin = ''; t.style.paintOrder = '';
+        t.style.color = ''; t.style.textShadow = '';
+      });
+    svgEl.querySelectorAll('[data-sketch-filter]').forEach(f => f.remove());
+    svgEl.querySelectorAll('clipPath[id^="clip-tight-"], clipPath[id^="clip-bleed-"]').forEach(c => c.remove());
+    svgEl.querySelectorAll('[data-sketch-mindmap-override]').forEach(s => s.remove());
+    svgEl.querySelectorAll('[data-sketch-gantt-style]').forEach(s => s.remove());
+    svgEl.querySelectorAll('[data-sketch-gantt-rules]').forEach(g => g.remove());
+  },
+
+  /* ── Private Helpers ─────────────────────────────────────── */
+
+  _getGeometrySignature(el) {
+    const tag = el.tagName.toLowerCase();
+    const transform = (el.getAttribute('transform') || '').trim();
+    const round = v => Math.round((parseFloat(v) || 0) * 10) / 10;
+    let base = '';
+    if (tag === 'rect') {
+      base = `rect:${round(el.getAttribute('x'))},${round(el.getAttribute('y'))},${round(el.getAttribute('width'))},${round(el.getAttribute('height'))}`;
+    } else if (tag === 'circle') {
+      base = `circle:${round(el.getAttribute('cx'))},${round(el.getAttribute('cy'))},${round(el.getAttribute('r'))}`;
+    } else if (tag === 'ellipse') {
+      base = `ellipse:${round(el.getAttribute('cx'))},${round(el.getAttribute('cy'))},${round(el.getAttribute('rx'))},${round(el.getAttribute('ry'))}`;
+    } else if (tag === 'line') {
+      base = `line:${round(el.getAttribute('x1'))},${round(el.getAttribute('y1'))},${round(el.getAttribute('x2'))},${round(el.getAttribute('y2'))}`;
+    } else if (tag === 'polygon') {
+      base = `polygon:${(el.getAttribute('points') || '').trim()}`;
+    } else if (tag === 'path') {
+      base = `path:${(el.getAttribute('d') || '').trim()}`;
+    }
+    return base ? `${base}|${transform}` : null;
+  },
+
+  _applyTransform(el, newEl, extraTransform = '') {
+    const t = el.getAttribute('transform') || '';
+    const combined = `${t} ${extraTransform}`.trim();
+    if (combined) {
+      newEl.setAttribute('transform', combined);
+    }
+  },
+
+  _shouldSkip(el) {
+    // Skip if inside marker/arrowhead defs
+    if (el.closest('marker') || el.closest('defs')) return true;
+    // Skip tiny rects (label backgrounds, etc under 4px)
+    if (el.tagName === 'rect') {
+      const w = parseFloat(el.getAttribute('width'));
+      const h = parseFloat(el.getAttribute('height'));
+      if (w < 4 || h < 4) return true;
+    }
+
+    // ── Skip gantt / xychart background scaffolding ─────────
+    const cls  = (el.getAttribute('class') || '');
+    const pCls = el.parentElement?.getAttribute('class') || '';
+    const gpCls = el.parentElement?.parentElement?.getAttribute('class') || '';
+
+    // Vertical grid lines
+    if (/\bgrid-line\b/.test(cls) || /\bgrid\b/.test(pCls)) return true;
+
+    // Colored section background bands (gantt horizontal stripes)
+    if (el.tagName === 'rect' && /\bsection\b/.test(cls)) return true;
+    if (/\bsectionBg\b/.test(pCls) || /\bsection-bg\b/.test(pCls)) return true;
+
+    // Horizontal section separator lines
+    if (/\bsection-line\b/.test(cls)) return true;
+
+    // Today-marker line
+    if (/\btoday\b/.test(cls) || /\btoday\b/.test(pCls)) return true;
+
+    // Generic background groups
+    if (/\bbackground\b/.test(pCls)) return true;
+
+    // Pie chart background circle (causes overlapping fill behind slices)
+    if (el.tagName === 'circle') {
+      if (/\bpieCircle\b|\bpie-border\b|\bpie-outline\b/.test(cls)) return true;
+
+      // Strongest signal: SVG root identifies as a pie chart
+      const rootSvg = el.closest('svg');
+      const svgRole = rootSvg?.getAttribute('aria-roledescription') || '';
+      const svgCls  = rootSvg?.getAttribute('class') || '';
+      if (/pie/i.test(svgRole) || /\bpieChart\b|\bpie\b/i.test(svgCls)) return true;
+
+      // Ancestor <g> class contains "pie"
+      let anc = el.parentElement;
+      for (let i = 0; i < 4 && anc; i++) {
+        if (/\bpie\b/i.test(anc.getAttribute('class') || '')) return true;
+        anc = anc.parentElement;
+      }
+
+      // Fallback: sibling slice paths
+      const parent = el.parentElement;
+      if (parent) {
+        const siblings = parent.querySelectorAll('path');
+        for (const sib of siblings) {
+          if (/\bslice\b|\bpie\d*\b|\bpiesection\b/.test(sib.getAttribute('class') || '')) return true;
+        }
+        if (/\bpie\b/.test(pCls) || /\bpie\b/.test(gpCls)) return true;
+      }
+    }
+
+    // xychart axis lines and tick marks (structural, not data shapes)
+    if (/\baxis\b|\btick\b/.test(cls)) return true;
+    if (/\baxis\b/.test(pCls) || /\baxis\b/.test(gpCls)) return true;
+
+    // Mermaid root background rect (full-SVG background)
+    if (el.tagName === 'rect' && el.getAttribute('class') === 'background') return true;
+    if (el.tagName === 'rect' && !el.getAttribute('class') && !el.getAttribute('id')) {
+      // Heuristic: top-level unclassed rect covering the whole SVG = background
+      const parent = el.parentElement;
+      if (parent && parent.tagName === 'g' && !parent.getAttribute('class') &&
+          parent.parentElement?.tagName === 'svg') return true;
+    }
+
+    return false;
+  },
+
+  /** True if the element is a Gantt task bar rect */
+  _isGanttBar(el) {
+    if (el.tagName !== 'rect') return false;
+    const cls = (el.getAttribute('class') || '');
+    // Mermaid gantt task bars carry class like: task, task0, taskText, active, done, crit, etc.
+    // The bar rects (not text) have no 'Text' in the class.
+    if (/\btask\b/.test(cls) && !/\bText\b|\btext\b/.test(cls)) return true;
+    // Also matches: 'task task0 active', 'task done', 'task crit' etc.
+    if (/\btask\d*\b/.test(cls)) return true;
+    return false;
+  },
+
+  _isFilledShape(el) {
+    const tag = el.tagName.toLowerCase();
+    if (['rect', 'circle', 'ellipse', 'polygon'].includes(tag)) return true;
+    if (tag === 'path') {
+      const d = el.getAttribute('d') || '';
+      return d.includes('Z') || d.includes('z'); // closed path
+    }
+    return false;
+  },
+
+  _resolveFill(el, colorIdx) {
+    const { value: fill, declared } = this._getEffectiveFill(el);
+    const cls = this._classifyColor(fill, el, declared ? 'declared' : 'absent');
+
+    if (cls === 'explicit-none') {
+      // Element consciously opted out of fill (e.g. node-border, stroke-only
+      // shapes). Never auto-color these — they are intentionally transparent.
+      return 'transparent';
+    }
+
+    if (cls === 'none') {
+      // No fill opinion at all — auto-color if enabled
+      if (ThemeConfig.autoColor && this._isFilledShape(el)) {
+        return Palettes.getColor(colorIdx);
+      }
+      return 'transparent';
+    }
+
+    if (cls === 'default') {
+      // Mermaid-default / neutral fill — replace with palette if auto-color on
+      if (ThemeConfig.autoColor && this._isFilledShape(el)) {
+        return Palettes.getColor(colorIdx);
+      }
+      return 'transparent';
+    }
+
+    // cls === 'explicit' — a real, chromatic color deliberately set
+    return fill;
+  },
+
+  _resolveStroke(el) {
+    if (ThemeConfig.forceStroke) return ThemeConfig.strokeColor;
+    const raw = this._getEffectiveStroke(el);
+    if (!raw || raw === 'none') return ThemeConfig.strokeColor;
+    const cls = this._classifyColor(raw, el, 'declared');
+    if (cls === 'none' || cls === 'explicit-none' || cls === 'default') return ThemeConfig.strokeColor;
+    return raw;
+  },
+
+  /**
+   * Walk the style chain: inline style → attribute → computedStyle → parent chain.
+   * Returns { value, declared } where declared=true means fill was explicitly set
+   * (even to 'none'), as opposed to simply being absent.
+   */
+  _getEffectiveFill(el) {
+    // 1. Inline style takes highest precedence
+    if (el.style && el.style.fill && el.style.fill !== '') {
+      return { value: el.style.fill, declared: true };
+    }
+    // 2. Explicit attribute (covers fill="none" and fill="transparent")
+    const attr = el.getAttribute('fill');
+    if (attr !== null && attr !== '') return { value: attr, declared: true };
+    // fill="" (empty string attribute) — treat as undeclared
+    if (attr === '') return { value: 'none', declared: false };
+    // 3. Computed style (catches class-based rules in injected <style> blocks)
+    try {
+      const computed = getComputedStyle(el).fill;
+      if (computed && computed !== '' && computed !== 'none') {
+        return { value: computed, declared: false };
+      }
+    } catch (e) {}
+    return { value: 'none', declared: false };
+  },
+
+  _getEffectiveStroke(el) {
+    if (el.style && el.style.stroke && el.style.stroke !== '') {
+      return el.style.stroke;
+    }
+    const attr = el.getAttribute('stroke');
+    if (attr && attr !== '') return attr;
+    try {
+      const computed = getComputedStyle(el).stroke;
+      if (computed && computed !== '' && computed !== 'none') return computed;
+    } catch (e) {}
+    return 'none';
+  },
+
+  /**
+   * Classify a color into: 'explicit' | 'default' | 'none' | 'explicit-none'
+   *
+   * 'none'          — no fill opinion (absent / inherited)
+   * 'explicit-none' — fill deliberately set to none/transparent by the author
+   * 'default'       — a neutral, light, or known-Mermaid-default color (safe to override)
+   * 'explicit'      — a real chromatic color deliberately chosen (keep it)
+   */
+  _classifyColor(color, el, rawSource) {
+    if (!color) return 'none';
+    const c = color.trim().toLowerCase();
+
+    // Explicit none/transparent — check whether it was *declared* (not just absent).
+    // rawSource='declared' means the element consciously set fill:none / fill="none".
+    if (c === 'none' || c === 'transparent' || c === '') {
+      return rawSource === 'declared' ? 'explicit-none' : 'none';
+    }
+
+    // ── Known Mermaid theme default tokens ──────────────────
+    // Collected from: default, neutral, forest, base theme sources
+    const knownDefaults = new Set([
+      // Whites / near-whites
+      '#fff', '#ffffff', 'white', '#fefefe', '#fafafa', '#f9f9f9',
+      '#f5f5f5', '#f8f8f8', '#f4f4f4',
+      // Mermaid default theme node fills
+      '#ececff', '#eee8d5', '#fff5ad', '#ffffde',
+      // Mermaid neutral theme
+      '#eee', '#eeeeee', '#dddddd', '#ddd',
+      // Mermaid forest theme
+      '#cde498', '#cdffb2',
+      // Mermaid base theme common fills
+      '#fff0f0', '#f0fff0', '#f0f0ff',
+      // Very common SVG defaults
+      'rgb(255, 255, 255)', 'rgb(238, 238, 238)',
+      'rgb(236, 236, 255)', 'rgb(255, 255, 173)',
+    ]);
+
+    if (knownDefaults.has(c)) return 'default';
+
+    // ── Chart type detection: chart shapes always treated as 'default' ──
+    // so the palette can recolor them
+    if (el && this._isChartElement(el)) return 'default';
+
+    // ── Parse to RGB for HSL analysis ──────────────────────
+    const rgb = this._parseToRGB(c);
+    if (!rgb) {
+      // Unknown format — treat as explicit to avoid silently dropping colors
+      return 'explicit';
+    }
+
+    const [r, g, b] = rgb;
+    const { h, s, l } = this._rgbToHSL(r, g, b);
+
+    // 'none' already handled; check near-transparent
+    if (l > 0.97) return 'none'; // nearly invisible / white background
+
+    // 'default': low saturation (grey-ish) AND very light
+    // This catches light greys, tinted whites, pale yellows etc.
+    if (s < 0.15 && l > 0.82) return 'default';
+
+    // Light but tinted (e.g. pale blue #ECECFF, pale yellow #FFF5AD)
+    // These are Mermaid's "styled" defaults — still override them
+    if (s < 0.55 && l > 0.88) return 'default';
+
+    // Mermaid xychart / pie / gitGraph use vivid colors from their own
+    // internal palette — these are 'explicit' and should be kept
+    return 'explicit';
+  },
+
+  /** True if this element is part of a chart that self-colors (xychart, pie, etc.) */
+  _isChartElement(el) {
+    const cls = (el.getAttribute('class') || '').toLowerCase();
+    const svgCls = (el.closest('svg')?.getAttribute('class') || '').toLowerCase();
+
+    // xychart bar/line elements
+    if (/\bbar\d*\b/.test(cls)) return true;
+    // pie chart slices
+    if (/\bslice\b|\bpie\d*\b|\bpiesection\b/.test(cls)) return true;
+    // quadrant dots/areas
+    if (/\bquadrant\b/.test(cls)) return true;
+    // gitGraph commits/branches
+    if (/\bcommit\b|\bbranch\b/.test(cls) && /\bgit\b/.test(svgCls)) return true;
+
+    return false;
+  },
+
+  /** Parse CSS color string → [r, g, b] (0–255) or null */
+  _parseToRGB(c) {
+    // rgb(r, g, b) / rgba(r, g, b, a)
+    let m = c.match(/^rgba?\(\s*(\d+),\s*(\d+),\s*(\d+)/);
+    if (m) return [+m[1], +m[2], +m[3]];
+
+    // 3-char hex: #rgb
+    m = c.match(/^#([0-9a-f]{3})$/);
+    if (m) {
+      const [, h] = m;
+      return [
+        parseInt(h[0]+h[0], 16),
+        parseInt(h[1]+h[1], 16),
+        parseInt(h[2]+h[2], 16),
+      ];
+    }
+
+    // 6-char hex: #rrggbb
+    m = c.match(/^#([0-9a-f]{6})$/);
+    if (m) {
+      const hex = m[1];
+      return [
+        parseInt(hex.slice(0,2), 16),
+        parseInt(hex.slice(2,4), 16),
+        parseInt(hex.slice(4,6), 16),
+      ];
+    }
+
+    // 8-char hex: #rrggbbaa
+    m = c.match(/^#([0-9a-f]{8})$/);
+    if (m) {
+      const hex = m[1];
+      return [
+        parseInt(hex.slice(0,2), 16),
+        parseInt(hex.slice(2,4), 16),
+        parseInt(hex.slice(4,6), 16),
+      ];
+    }
+
+    // Named colors — handle the most common ones we care about
+    const named = {
+      white: [255,255,255], black: [0,0,0], red: [255,0,0],
+      green: [0,128,0], blue: [0,0,255], grey: [128,128,128],
+      gray: [128,128,128], yellow: [255,255,0], orange: [255,165,0],
+      purple: [128,0,128], pink: [255,192,203], transparent: null,
+    };
+    if (named[c] !== undefined) return named[c];
+
+    return null; // Unknown
+  },
+
+  /** Convert RGB (0–255) to HSL (0–1 each) */
+  _rgbToHSL(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    const l = (max + min) / 2;
+    if (max === min) return { h: 0, s: 0, l };
+    const d = max - min;
+    const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    let h;
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+    return { h, s, l };
+  },
+
+  /** @deprecated Use _classifyColor instead */
+  _isWhitish(color) {
+    return this._classifyColor(color, null, 'absent') !== 'explicit';
+  },
+
+  _seedFrom(el) {
+    // Deterministic seed from element position for consistency
+    const bbox = el.getBBox?.() || { x: 0, y: 0, width: 0, height: 0 };
+    return Math.round(bbox.x * 13 + bbox.y * 7 + bbox.width * 3 + bbox.height * 11) || 1;
+  },
+
+  /** Scale a pixel value so it appears consistent on screen after CSS auto-fit */
+  _px(v) { return v * this._pxScale; },
+
+  _drawMaybeDashedShape(rc, el, opts) {
+    // Preserve Mermaid's dashed/staccato semantics, especially sequence
+    // diagram "-->>" / dotted return messages. Rough.js path rendering would
+    // otherwise convert the whole open path into one continuous line.
+    if (this._isDashed(el) && !this._isFilledShape(el)) {
+      const dashed = this._drawDashedShape(rc, el, opts);
+      if (dashed) return dashed;
+    }
+    return this._drawShape(rc, el, opts);
+  },
+
+  _isDashed(el) {
+    const raw =
+      el.getAttribute('stroke-dasharray') ||
+      el.style?.strokeDasharray ||
+      (() => { try { return getComputedStyle(el).strokeDasharray; } catch (_) { return ''; } })();
+
+    if (!raw) return false;
+    const v = String(raw).trim().toLowerCase();
+    if (!v || v === 'none' || v === '0' || v === '0px') return false;
+    return /\d/.test(v);
+  },
+
+  _parseDashArray(el) {
+    const raw =
+      el.getAttribute('stroke-dasharray') ||
+      el.style?.strokeDasharray ||
+      (() => { try { return getComputedStyle(el).strokeDasharray; } catch (_) { return ''; } })();
+
+    const nums = String(raw || '')
+      .split(/[\s,]+/)
+      .map(v => parseFloat(v))
+      .filter(v => isFinite(v) && v > 0);
+
+    if (nums.length === 0) return null;
+
+    // SVG repeats odd-length dash arrays.
+    return nums.length % 2 === 1 ? nums.concat(nums) : nums;
+  },
+
+  _drawDashedShape(rc, el, opts) {
+    const tag = el.tagName.toLowerCase();
+    if (!['path', 'line'].includes(tag)) return null;
+
+    const pattern = this._parseDashArray(el);
+    if (!pattern) return null;
+
+    let total = 0;
+    try {
+      if (tag === 'path') {
+        total = el.getTotalLength();
+      } else {
+        const x1 = parseFloat(el.getAttribute('x1')) || 0;
+        const y1 = parseFloat(el.getAttribute('y1')) || 0;
+        const x2 = parseFloat(el.getAttribute('x2')) || 0;
+        const y2 = parseFloat(el.getAttribute('y2')) || 0;
+        total = Math.hypot(x2 - x1, y2 - y1);
+      }
+    } catch (_) {
+      return null;
+    }
+
+    if (!(total > 0)) return null;
+
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    let dist = 0;
+    let idx = 0;
+    let draw = true;
+
+    while (dist < total) {
+      const step = pattern[idx % pattern.length];
+      const next = Math.min(total, dist + step);
+
+      if (draw && next > dist) {
+        this._appendRoughOpenSegment(rc, g, el, dist, next, total, {
+          ...opts,
+          fill: 'none',
+        });
+      }
+
+      dist = next;
+      idx++;
+      draw = !draw;
+    }
+
+    return g.childNodes.length ? g : null;
+  },
+
+  _appendRoughOpenSegment(rc, group, el, start, end, total, opts) {
+    const len = end - start;
+    const pieces = Math.max(1, Math.ceil(len / Math.max(6, this._px(8))));
+    let prev = this._pointAtOpenLength(el, start, total);
+
+    for (let i = 1; i <= pieces; i++) {
+      const d = start + (len * i / pieces);
+      const curr = this._pointAtOpenLength(el, d, total);
+      if (prev && curr) {
+        group.appendChild(rc.line(prev.x, prev.y, curr.x, curr.y, opts));
+      }
+      prev = curr;
+    }
+  },
+
+  _pointAtOpenLength(el, dist, total) {
+    const tag = el.tagName.toLowerCase();
+
+    if (tag === 'path') {
+      try {
+        const p = el.getPointAtLength(Math.max(0, Math.min(total, dist)));
+        return { x: p.x, y: p.y };
+      } catch (_) {
+        return null;
+      }
+    }
+
+    if (tag === 'line') {
+      const x1 = parseFloat(el.getAttribute('x1')) || 0;
+      const y1 = parseFloat(el.getAttribute('y1')) || 0;
+      const x2 = parseFloat(el.getAttribute('x2')) || 0;
+      const y2 = parseFloat(el.getAttribute('y2')) || 0;
+      const t = total > 0 ? Math.max(0, Math.min(1, dist / total)) : 0;
+      return {
+        x: x1 + (x2 - x1) * t,
+        y: y1 + (y2 - y1) * t,
+      };
+    }
+
+    return null;
+  },
+
+  _hasMarker(el) {
+    return el.hasAttribute('marker-start') ||
+           el.hasAttribute('marker-end') ||
+           el.hasAttribute('marker-mid') ||
+           !!el.style?.markerStart ||
+           !!el.style?.markerEnd ||
+           !!el.style?.markerMid ||
+           (() => {
+             try {
+               const cs = getComputedStyle(el);
+               return (cs.markerStart && cs.markerStart !== 'none') ||
+                      (cs.markerEnd && cs.markerEnd !== 'none') ||
+                      (cs.markerMid && cs.markerMid !== 'none');
+             } catch (_) {
+               return false;
+             }
+           })();
+  },
+
+  _drawArrowMarkers(rc, el, opts = {}) {
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+
+    const drawEnd = this._markerValue(el, 'end') !== 'none';
+    const drawStart = this._markerValue(el, 'start') !== 'none';
+
+    if (drawStart) this._appendArrowHead(rc, g, el, 'start', opts);
+    if (drawEnd) this._appendArrowHead(rc, g, el, 'end', opts);
+
+    return g.childNodes.length ? g : null;
+  },
+
+  _markerValue(el, which) {
+    const attr = el.getAttribute(`marker-${which}`);
+    if (attr && attr !== 'none') return attr;
+
+    const styleProp = which === 'start'
+      ? 'markerStart'
+      : which === 'end'
+        ? 'markerEnd'
+        : 'markerMid';
+
+    const inline = el.style?.[styleProp];
+    if (inline && inline !== 'none') return inline;
+
+    try {
+      const cs = getComputedStyle(el);
+      const v = cs[styleProp];
+      return v || 'none';
+    } catch (_) {
+      return 'none';
+    }
+  },
+
+  _appendArrowHead(rc, group, el, which, opts = {}) {
+    const info = this._endpointInfo(el, which);
+    if (!info) return;
+
+    const stroke = opts.stroke || ThemeConfig.strokeColor;
+    const strokeWidth = opts.strokeWidth || this._px(ThemeConfig.strokeWidth);
+    const seed = opts.seed || 1;
+
+    // Screen-consistent, hand-drawn arrow size. This intentionally does not
+    // inspect Mermaid marker internals, so it works across marker themes.
+    const size = Math.max(this._px(7), strokeWidth * 5.5);
+    const wingAngle = Math.PI * 0.82; // ~148°, classic open arrowhead
+
+    const a1 = info.angle + wingAngle;
+    const a2 = info.angle - wingAngle;
+
+    const p = info.point;
+    const p1 = {
+      x: p.x + Math.cos(a1) * size,
+      y: p.y + Math.sin(a1) * size,
+    };
+    const p2 = {
+      x: p.x + Math.cos(a2) * size,
+      y: p.y + Math.sin(a2) * size,
+    };
+
+    const common = {
+      roughness: ThemeConfig.outRoughness,
+      bowing: ThemeConfig.outBowing,
+      strokeWidth,
+      stroke,
+      fill: 'none',
+      disableMultiStroke: true,
+    };
+
+    group.appendChild(rc.line(p.x, p.y, p1.x, p1.y, {
+      ...common,
+      seed: seed + (which === 'start' ? 3 : 7),
+    }));
+    group.appendChild(rc.line(p.x, p.y, p2.x, p2.y, {
+      ...common,
+      seed: seed + (which === 'start' ? 11 : 17),
+    }));
+  },
+
+  _endpointInfo(el, which) {
+    const tag = el.tagName.toLowerCase();
+
+    try {
+      if (tag === 'path') {
+        const total = el.getTotalLength();
+        if (!(total > 0)) return null;
+
+        const delta = Math.min(Math.max(this._px(4), 1), total / 3);
+
+        if (which === 'start') {
+          const p0 = el.getPointAtLength(0);
+          const p1 = el.getPointAtLength(delta);
+          return {
+            point: { x: p0.x, y: p0.y },
+            // Start marker points opposite the first segment direction.
+            angle: Math.atan2(p0.y - p1.y, p0.x - p1.x),
+          };
+        }
+
+        const p0 = el.getPointAtLength(total - delta);
+        const p1 = el.getPointAtLength(total);
+        return {
+          point: { x: p1.x, y: p1.y },
+          angle: Math.atan2(p1.y - p0.y, p1.x - p0.x),
+        };
+      }
+
+      if (tag === 'line') {
+        const x1 = parseFloat(el.getAttribute('x1')) || 0;
+        const y1 = parseFloat(el.getAttribute('y1')) || 0;
+        const x2 = parseFloat(el.getAttribute('x2')) || 0;
+        const y2 = parseFloat(el.getAttribute('y2')) || 0;
+
+        if (which === 'start') {
+          return {
+            point: { x: x1, y: y1 },
+            angle: Math.atan2(y1 - y2, x1 - x2),
+          };
+        }
+
+        return {
+          point: { x: x2, y: y2 },
+          angle: Math.atan2(y2 - y1, x2 - x1),
+        };
+      }
+    } catch (_) {}
+
+    return null;
+  },
+
+  _drawShape(rc, el, opts) {
+    const tag = el.tagName.toLowerCase();
+
+    switch (tag) {
+      case 'rect': {
+        const x  = parseFloat(el.getAttribute('x')) || 0;
+        let   y  = parseFloat(el.getAttribute('y')) || 0;
+        const w  = parseFloat(el.getAttribute('width'));
+        let   h  = parseFloat(el.getAttribute('height'));
+        const rx = parseFloat(el.getAttribute('rx')) || 0;
+        if (!w || !h) return null;
+
+        // ── Inflate Gantt task bars vertically ─────────────
+        if (this._isGanttBar(el)) {
+          const inflate = ThemeConfig.ganttBarInflate ?? 0.35;
+          const extra   = this._px(h * inflate);
+          y -= extra / 2;
+          h += extra;
+        }
+
+        // Rough.js doesn't support rx natively; approximate with path for rounded
+        if (rx > 4) {
+          const d = this._roundedRectPath(x, y, w, h, Math.min(rx, w/2, h/2));
+          return rc.path(d, opts);
+        }
+        return rc.rectangle(x, y, w, h, opts);
+      }
+
+      case 'circle': {
+        const cx = parseFloat(el.getAttribute('cx')) || 0;
+        const cy = parseFloat(el.getAttribute('cy')) || 0;
+        const r  = parseFloat(el.getAttribute('r'))  || 0;
+        return rc.circle(cx, cy, r * 2, opts);
+      }
+
+      case 'ellipse': {
+        const cx = parseFloat(el.getAttribute('cx')) || 0;
+        const cy = parseFloat(el.getAttribute('cy')) || 0;
+        const rx = parseFloat(el.getAttribute('rx')) || 0;
+        const ry = parseFloat(el.getAttribute('ry')) || 0;
+        return rc.ellipse(cx, cy, rx * 2, ry * 2, opts);
+      }
+
+      case 'polygon': {
+        const pts = el.getAttribute('points');
+        if (!pts) return null;
+        const coords = pts.trim().split(/[\s,]+/).map(Number);
+        const pairs = [];
+        for (let i = 0; i < coords.length; i += 2) {
+          pairs.push([coords[i], coords[i+1]]);
+        }
+        return rc.polygon(pairs, opts);
+      }
+
+      case 'line': {
+        const x1 = parseFloat(el.getAttribute('x1')) || 0;
+        const y1 = parseFloat(el.getAttribute('y1')) || 0;
+        const x2 = parseFloat(el.getAttribute('x2')) || 0;
+        const y2 = parseFloat(el.getAttribute('y2')) || 0;
+        return rc.line(x1, y1, x2, y2, { ...opts, fill: 'none' });
+      }
+
+      case 'path': {
+        const d = el.getAttribute('d');
+        if (!d || d.trim().length < 3) return null;
+        // For open paths (lines/arrows), don't fill
+        const closed = /[Zz]/.test(d);
+        if (!closed) {
+          return rc.path(d, { ...opts, fill: 'none' });
+        }
+        return rc.path(d, opts);
+      }
+
+      default: return null;
+    }
+  },
+
+  /* ── Gantt Post-Processor ────────────────────────────────── */
+  _processGantt(svgEl) {
+    // Detect if this is a gantt chart
+    const svgRole = (svgEl.getAttribute('aria-roledescription') || '').toLowerCase();
+    const svgCls  = (svgEl.getAttribute('class') || '').toLowerCase();
+    const hasGanttMarkers = svgEl.querySelector('.task, [class*="task"]');
+    const isGantt = /gantt/i.test(svgRole) || /gantt/i.test(svgCls) || !!hasGanttMarkers;
+    if (!isGantt) return;
+
+    const rc = rough.svg(svgEl);
+
+    // ── 1. Hide ALL section background rects (erase the color bands) ──
+    svgEl.querySelectorAll('rect').forEach(el => {
+      const cls  = (el.getAttribute('class') || '');
+      const pCls = el.parentElement?.getAttribute('class') || '';
+
+      const isSectionBand =
+        /\bsection\d*\b/.test(cls) ||
+        /\bsectionBg\b|\bsection-bg\b/.test(cls) ||
+        /\bsectionBg\b|\bsection-bg\b/.test(pCls) ||
+        // Mermaid also renders section bands as unclassed rects inside a
+        // <g class="grid"> or <g class="rows"> group
+        /\brows?\b|\bband\b/.test(pCls);
+
+      if (isSectionBand) {
+        el.style.setProperty('fill', 'transparent', 'important');
+        el.style.setProperty('fill-opacity', '0', 'important');
+        el.style.setProperty('stroke', 'none', 'important');
+        el.style.setProperty('display', 'none', 'important');
+      }
+    });
+
+    // Also hide via injected style (beats Mermaid's own <style> block)
+    const defs = this._ensureDefs(svgEl);
+    defs.querySelectorAll('[data-sketch-gantt-style]').forEach(s => s.remove());
+    const gStyle = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+    gStyle.setAttribute('data-sketch-gantt-style', 'true');
+    gStyle.textContent = `
+      /* Sketch Lab: erase Gantt section background fills */
+      .mermaid-gantt rect[class*="section"],
+      rect.section0, rect.section1, rect.section2, rect.section3,
+      rect.odd, rect.even,
+      .grid rect, .rows rect,
+      [class*="sectionBg"], [class*="section-bg"] {
+        fill: transparent !important;
+        fill-opacity: 0 !important;
+        display: none !important;
+      }
+    `;
+    defs.appendChild(gStyle);
+
+    // ── 2. Collect timeline geometry ──────────────────────────
+    // We need the chart's bounding box to draw horizontal rules.
+    // The most reliable anchor is the set of task bars.
+    const taskBars = Array.from(svgEl.querySelectorAll('rect')).filter(r => this._isGanttBar(r));
+    if (taskBars.length === 0) return;
+
+    // Compute chart extent from all task bars
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    taskBars.forEach(bar => {
+      try {
+        const bb = bar.getBBox();
+        if (bb.x < minX) minX = bb.x;
+        if (bb.x + bb.width > maxX) maxX = bb.x + bb.width;
+        if (bb.y < minY) minY = bb.y;
+        if (bb.y + bb.height > maxY) maxY = bb.y + bb.height;
+      } catch(e) {}
+    });
+    if (!isFinite(minX) || !isFinite(maxX)) return;
+
+    // Extend the horizontal rule slightly beyond the task bars
+    const ruleX1 = minX - 8;
+    const ruleX2 = maxX + 8;
+
+    // ── 3. Find section boundary Y positions ─────────────────
+    // Group task bars by their approximate Y row to find row boundaries.
+    const rowYs = [...new Set(taskBars.map(bar => {
+      try { return Math.round(bar.getBBox().y); } catch(e) { return 0; }
+    }))].sort((a, b) => a - b);
+
+    // Determine typical bar height
+    let barH = 20;
+    if (taskBars.length > 0) {
+      try { barH = taskBars[0].getBBox().height; } catch(e) {}
+    }
+
+    // Find section text labels to identify section boundary rows
+    const sectionLabelEls = Array.from(svgEl.querySelectorAll('text')).filter(t => {
+      const cls = (t.getAttribute('class') || '');
+      return /\bsectionTitle\b|\bsection-title\b|\btitleText\b/.test(cls);
+    });
+
+    // Collect unique Y positions where sections start (top of first bar in section)
+    // Fall back to detecting large Y gaps between consecutive rows.
+    const sectionBoundaryYs = new Set();
+
+    if (sectionLabelEls.length > 0) {
+      // Use section label Y positions as boundary hints
+      sectionLabelEls.forEach(label => {
+        try {
+          const ly = label.getBBox().y;
+          // Find the closest row Y to this label
+          let closest = rowYs[0];
+          rowYs.forEach(ry => { if (Math.abs(ry - ly) < Math.abs(closest - ly)) closest = ry; });
+          sectionBoundaryYs.add(closest);
+        } catch(e) {}
+      });
+    }
+
+    // Always add the very first row as a top boundary
+    if (rowYs.length > 0) sectionBoundaryYs.add(rowYs[0]);
+
+    // Detect large gaps between consecutive rows = section boundaries
+    for (let i = 1; i < rowYs.length; i++) {
+      const gap = rowYs[i] - rowYs[i-1];
+      if (gap > barH * 2.2) {
+        sectionBoundaryYs.add(rowYs[i]);
+      }
+    }
+
+    // Bottom boundary (below last bar)
+    const bottomY = maxY + barH * 0.4;
+
+    // ── 4. Inject vertical date-grid lines ───────────────────
+    // Find the existing Mermaid tick/grid line x-positions
+    const gridGroup = svgEl.querySelector('.grid, [class*="grid"]');
+    const tickXs = new Set();
+
+    if (gridGroup) {
+      gridGroup.querySelectorAll('line').forEach(line => {
+        const x = parseFloat(line.getAttribute('x1') || line.getAttribute('x2') || '0');
+        if (x >= minX - 5 && x <= maxX + 5) tickXs.add(Math.round(x));
+      });
+    }
+
+    // Fallback: also look for Mermaid tick <line> elements anywhere
+    if (tickXs.size === 0) {
+      svgEl.querySelectorAll('line').forEach(line => {
+        const cls = (line.getAttribute('class') || '');
+        if (/\btick\b|\bgrid\b/.test(cls)) {
+          const x = parseFloat(line.getAttribute('x1') || '0');
+          if (x >= minX - 5 && x <= maxX + 5) tickXs.add(Math.round(x));
+        }
+      });
+    }
+
+    // ── 5. Draw sketchy horizontal section separator rules ───
+    const rulesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    rulesGroup.setAttribute('class', 'sketch-gantt-rules');
+    rulesGroup.setAttribute('data-sketch-gantt-rules', 'true');
+
+    const strokeColor = ThemeConfig.strokeColor;
+
+    // Draw a horizontal rule at each section boundary
+    Array.from(sectionBoundaryYs).sort((a, b) => a - b).forEach((ry, i) => {
+      const ruleY = ry - barH * 0.55; // just above the first bar of the section
+
+      const ruleEl = rc.line(ruleX1, ruleY, ruleX2, ruleY, {
+        roughness: 1.2,
+        bowing:    1.5,
+        strokeWidth: i === 0 ? 1.8 : 1.2,
+        stroke: strokeColor,
+        seed: Math.round(ruleY * 7),
+      });
+      ruleEl.style.opacity = i === 0 ? '0.7' : '0.5';
+      rulesGroup.appendChild(ruleEl);
+    });
+
+    // Bottom rule
+    const bottomRuleEl = rc.line(ruleX1, bottomY, ruleX2, bottomY, {
+      roughness: 1.0,
+      bowing:    1.2,
+      strokeWidth: 1.5,
+      stroke: strokeColor,
+      seed: Math.round(bottomY * 5),
+    });
+    bottomRuleEl.style.opacity = '0.6';
+    rulesGroup.appendChild(bottomRuleEl);
+
+    // ── 6. Draw sketchy vertical date-grid lines ─────────────
+    if (tickXs.size > 0) {
+      const gridTop    = minY - barH * 0.8;
+      const gridBottom = bottomY;
+
+      tickXs.forEach(tx => {
+        const vlineEl = rc.line(tx, gridTop, tx, gridBottom, {
+          roughness: 0.8,
+          bowing:    0.5,
+          strokeWidth: 0.7,
+          stroke: strokeColor,
+          seed: Math.round(tx * 3),
+        });
+        vlineEl.style.opacity = '0.18';
+        rulesGroup.appendChild(vlineEl);
+      });
+
+      // Also draw left and right border verticals
+      [ruleX1 + 8, ruleX2 - 8].forEach((bx, bi) => {
+        const borderEl = rc.line(bx, gridTop, bx, gridBottom, {
+          roughness: 1.0,
+          bowing:    0.8,
+          strokeWidth: 1.2,
+          stroke: strokeColor,
+          seed: Math.round(bx * 11 + bi * 37),
+        });
+        borderEl.style.opacity = '0.4';
+        rulesGroup.appendChild(borderEl);
+      });
+    }
+
+    // Insert rules group before the first task bar's parent group
+    // so it renders behind the task bars
+    const firstTaskParent = taskBars[0]?.closest('g') || svgEl;
+    firstTaskParent.parentNode.insertBefore(rulesGroup, firstTaskParent);
+  },
+
+  _roundedRectPath(x, y, w, h, r) {
+    return `M${x+r},${y} h${w-2*r} a${r},${r} 0 0 1 ${r},${r}`
+         + ` v${h-2*r} a${r},${r} 0 0 1 -${r},${r}`
+         + ` h-${w-2*r} a${r},${r} 0 0 1 -${r},-${r}`
+         + ` v-${h-2*r} a${r},${r} 0 0 1 ${r},-${r} z`;
+  },
+
+  /* ── Mindmap Root Node Detection & Force-Clear ─────────────── */
+
+  /**
+   * Detect all shape elements that belong to the mindmap root node.
+   * Mermaid renders the root node with special classes and sometimes
+   * with overlapping shapes (background + foreground circles).
+   */
+  _detectMindmapRootShapes(svgEl, outSet) {
+    // Strategy 1: Look for known root node group classes
+    const rootSelectors = [
+      '.mindmap-root', '.root-node', '.mindmap-node.root',
+      'g.mindmap-node:first-of-type',
+      '[class*="root"]',
+    ];
+
+    let rootGroup = null;
+    for (const sel of rootSelectors) {
+      try {
+        rootGroup = svgEl.querySelector(sel);
+        if (rootGroup) break;
+      } catch(e) {}
+    }
+
+    // Strategy 2: If no explicit root class, find the first mindmap node group
+    // Mermaid renders mindmap nodes as <g class="mindmap-node"> in DOM order,
+    // with the root being the FIRST one.
+    if (!rootGroup) {
+      const allNodes = svgEl.querySelectorAll('.mindmap-node');
+      if (allNodes.length > 0) {
+        rootGroup = allNodes[0];
+      }
+    }
+
+    // Strategy 3: Look for the largest circle in the mindmap (root is typically biggest)
+    if (!rootGroup) {
+      const circles = svgEl.querySelectorAll('circle');
+      let maxR = 0, maxCircle = null;
+      circles.forEach(c => {
+        const r = parseFloat(c.getAttribute('r')) || 0;
+        if (r > maxR) { maxR = r; maxCircle = c; }
+      });
+      if (maxCircle && maxR > 30) {
+        rootGroup = maxCircle.closest('g') || maxCircle.parentElement;
+      }
+    }
+
+    // Strategy 4: Check for SVG role/class indicating mindmap
+    const svgCls = (svgEl.getAttribute('class') || '').toLowerCase();
+    const svgRole = (svgEl.getAttribute('aria-roledescription') || '').toLowerCase();
+    if (!rootGroup && (/mindmap/i.test(svgCls) || /mindmap/i.test(svgRole))) {
+      // In mindmap SVGs, the first <g> with a circle is usually the root
+      const gWithCircle = svgEl.querySelectorAll('g');
+      for (const g of gWithCircle) {
+        if (g.querySelector('circle, ellipse, rect')) {
+          const cls = (g.getAttribute('class') || '').toLowerCase();
+          // Skip legend, defs, background groups
+          if (/legend|background|def|grid|axis|label|text/i.test(cls)) continue;
+          rootGroup = g;
+          break;
+        }
+      }
+    }
+
+    if (!rootGroup) return;
+
+    // Collect ALL shapes inside the root group (including nested groups)
+    const shapes = rootGroup.querySelectorAll('rect, circle, ellipse, polygon, path');
+    shapes.forEach(s => outSet.add(s));
+
+    // Also add the root group's direct shape children (in case querySelectorAll missed some)
+    for (const child of rootGroup.children) {
+      if (['rect', 'circle', 'ellipse', 'polygon', 'path'].includes(child.tagName.toLowerCase())) {
+        outSet.add(child);
+      }
+    }
+  },
+
+  /**
+   * Second-pass force-clear: walk ALL shapes in the SVG and nuke any
+   * that belong to the mindmap root but weren't caught in the main loop.
+   * This handles overlapping background circles and Mermaid's CSS-injected fills.
+   */
+  _forceClearMindmapRoot(svgEl, rootShapes) {
+    if (rootShapes.size === 0) return;
+
+    // Also look for any shapes that SHARE THE SAME BBOX as root shapes
+    // (Mermaid sometimes duplicates the root circle as a background layer)
+    const rootBBoxes = [];
+    rootShapes.forEach(el => {
+      try {
+        const bb = el.getBBox();
+        if (bb.width > 0 && bb.height > 0) {
+          rootBBoxes.push({ x: Math.round(bb.x), y: Math.round(bb.y), w: Math.round(bb.width), h: Math.round(bb.height) });
+        }
+      } catch(e) {}
+    });
+
+    // Find shapes at the same position that weren't in our set
+    const allShapes = svgEl.querySelectorAll('rect, circle, ellipse, polygon, path');
+    allShapes.forEach(el => {
+      if (rootShapes.has(el)) return; // already handled
+      if (this._shouldSkip(el)) return;
+
+      try {
+        const bb = el.getBBox();
+        const ex = Math.round(bb.x), ey = Math.round(bb.y), ew = Math.round(bb.width), eh = Math.round(bb.height);
+        for (const rb of rootBBoxes) {
+          // If bbox overlaps significantly with a root shape bbox, it's a duplicate layer
+          if (Math.abs(ex - rb.x) < 3 && Math.abs(ey - rb.y) < 3 &&
+              Math.abs(ew - rb.w) < 3 && Math.abs(eh - rb.h) < 3) {
+            // This is a duplicate/overlapping shape at the root position — NUKE IT
+            el.style.setProperty('fill', 'transparent', 'important');
+            el.style.setProperty('fill-opacity', '0', 'important');
+            el.style.setProperty('display', 'none', 'important');
+            el.setAttribute('data-sketch-mindmap-root-dup', 'true');
+            rootShapes.add(el);
+            break;
+          }
+        }
+      } catch(e) {}
+    });
+
+    // Final nuclear option: check for any <style> rules targeting mindmap root
+    // and inject an overriding rule
+    this._injectMindmapRootStyleOverride(svgEl);
+  },
+
+  /**
+   * Inject a <style> rule that overrides Mermaid's mindmap root node fill.
+   * This is the nuclear option for when inline styles aren't enough.
+   */
+  _injectMindmapRootStyleOverride(svgEl) {
+    const defs = this._ensureDefs(svgEl);
+
+    // Remove any previous override
+    defs.querySelectorAll('[data-sketch-mindmap-override]').forEach(s => s.remove());
+
+    const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+    style.setAttribute('data-sketch-mindmap-override', 'true');
+    style.textContent = `
+      /* Sketch Lab: force-clear mindmap root node fills so hachure shows through */
+      .mindmap-root circle,
+      .mindmap-root rect,
+      .mindmap-root ellipse,
+      .mindmap-root polygon,
+      .mindmap-root path,
+      .root-node circle,
+      .root-node rect,
+      .root-node ellipse,
+      .root-node polygon,
+      .root-node path,
+      g.mindmap-node:first-of-type circle,
+      g.mindmap-node:first-of-type rect,
+      g.mindmap-node:first-of-type ellipse,
+      g.mindmap-node:first-of-type polygon,
+      g.mindmap-node:first-of-type path,
+      [data-sketch-mindmap-root],
+      [data-sketch-mindmap-root-dup] {
+        fill: transparent !important;
+        fill-opacity: 0 !important;
+      }
+    `;
+    defs.appendChild(style);
+  },
+};
+
+
+/* =============================================================
+ *  MODULE 4.4 — SVG VIEWBOX UTILITIES
+ * ============================================================= */
+const SvgViewBoxUtil = {
+  /**
+   * Tighten an SVG viewBox around its currently visible rendered content.
+   *
+   * This is intentionally measurement-based instead of chart-type-based:
+   * - removed legends stop contributing empty space
+   * - rotated labels only reserve the space they actually occupy
+   * - future Mermaid layout changes are handled more gracefully
+   */
+  tightenToVisibleContent(svgEl, opts = {}) {
+    if (!svgEl) return false;
+
+    const padding = opts.padding ?? 24;
+    const extraTop = opts.extraTop ?? 0;
+    const extraRight = opts.extraRight ?? 0;
+    const extraBottom = opts.extraBottom ?? 0;
+    const extraLeft = opts.extraLeft ?? 0;
+
+    let ctm;
+    try {
+      ctm = svgEl.getScreenCTM();
+    } catch (_) {
+      ctm = null;
+    }
+    if (!ctm) return this._tightenFallbackBBox(svgEl, padding, opts);
+
+    const inv = ctm.inverse();
+    const bounds = {
+      minX: Infinity,
+      minY: Infinity,
+      maxX: -Infinity,
+      maxY: -Infinity,
+    };
+
+    const includeRect = rect => {
+      if (!rect || rect.width <= 0 || rect.height <= 0) return;
+
+      const pts = [
+        new DOMPoint(rect.left,  rect.top),
+        new DOMPoint(rect.right, rect.top),
+        new DOMPoint(rect.right, rect.bottom),
+        new DOMPoint(rect.left,  rect.bottom),
+      ].map(p => p.matrixTransform(inv));
+
+      pts.forEach(p => {
+        bounds.minX = Math.min(bounds.minX, p.x);
+        bounds.minY = Math.min(bounds.minY, p.y);
+        bounds.maxX = Math.max(bounds.maxX, p.x);
+        bounds.maxY = Math.max(bounds.maxY, p.y);
+      });
+    };
+
+    const skipTags = new Set([
+      'defs', 'style', 'script', 'title', 'desc',
+      'marker', 'clipPath', 'mask', 'pattern', 'symbol',
+      'linearGradient', 'radialGradient', 'filter',
+    ]);
+
+    svgEl.querySelectorAll('*').forEach(el => {
+      const tag = el.tagName;
+      if (!tag || skipTags.has(tag)) return;
+      if (el.closest('defs, marker, clipPath, mask, pattern, symbol, filter')) return;
+
+      let cs;
+      try { cs = getComputedStyle(el); } catch (_) { return; }
+      if (!cs || cs.display === 'none' || cs.visibility === 'hidden') return;
+      if (parseFloat(cs.opacity || '1') === 0) return;
+
+      // Avoid measuring invisible/removed legend containers after pie cleanup.
+      if (el.classList?.contains('removed')) return;
+
+      try {
+        includeRect(el.getBoundingClientRect());
+      } catch (_) {}
+    });
+
+    if (!isFinite(bounds.minX) || !isFinite(bounds.minY) ||
+        !isFinite(bounds.maxX) || !isFinite(bounds.maxY)) {
+      return this._tightenFallbackBBox(svgEl, padding, opts);
+    }
+
+    const vx = bounds.minX - padding - extraLeft;
+    const vy = bounds.minY - padding - extraTop;
+    const vw = (bounds.maxX - bounds.minX) + padding * 2 + extraLeft + extraRight;
+    const vh = (bounds.maxY - bounds.minY) + padding * 2 + extraTop + extraBottom;
+
+    if (!(vw > 0) || !(vh > 0)) return false;
+
+    svgEl.setAttribute('viewBox', `${vx} ${vy} ${vw} ${vh}`);
+    svgEl.setAttribute('overflow', 'visible');
+    svgEl.style.overflow = 'visible';
+    return true;
+  },
+
+  _tightenFallbackBBox(svgEl, padding, opts = {}) {
+    try {
+      const bb = svgEl.getBBox();
+      if (!(bb.width > 0) || !(bb.height > 0)) return false;
+
+      const extraTop = opts.extraTop ?? 0;
+      const extraRight = opts.extraRight ?? 0;
+      const extraBottom = opts.extraBottom ?? 0;
+      const extraLeft = opts.extraLeft ?? 0;
+
+      svgEl.setAttribute('viewBox',
+        `${bb.x - padding - extraLeft} ${bb.y - padding - extraTop} ` +
+        `${bb.width + padding * 2 + extraLeft + extraRight} ` +
+        `${bb.height + padding * 2 + extraTop + extraBottom}`
+      );
+      svgEl.setAttribute('overflow', 'visible');
+      svgEl.style.overflow = 'visible';
+      return true;
+    } catch (_) {
+      return false;
+    }
+  },
+};
+
+
+/* =============================================================
+ *  MODULE 4.5 — PIE CHART LABELS ENGINE
+ * ============================================================= */
+const PieLabelEngine = {
+  process(svgEl) {
+    if (!ThemeConfig.pieLabelsOutside) return;
+
+    // Detect if it's a pie chart by looking for slices
+    const sliceTexts = Array.from(svgEl.querySelectorAll('text.slice, text.pie-text'));
+    if (sliceTexts.length === 0) return;
+
+    // Gather labels from the legend and strip the numeric data brackets
+    let legendNodes = Array.from(svgEl.querySelectorAll('text.legend, g.legend text, [class*="legend"] text'));
+    let labels = legendNodes.map(n => n.textContent.trim().replace(/\s*\[.*?\]$/, '')).filter(t => t.length > 0);
+    labels = [...new Set(labels)];
+
+    if (labels.length === 0) return;
+
+    // Remove the legend entirely so SketchEngine doesn't draw a sketchy box for it
+    svgEl.querySelectorAll('g.legend, g[class*="legend"], rect[class*="legend"]').forEach(el => el.remove());
+
+    // Move the pie chart title higher so it doesn't overlap with the top labels
+    const titleText = svgEl.querySelector('text.pieTitleText, text[class*="title"]');
+    if (titleText) {
+        const currentY = parseFloat(titleText.getAttribute('y') || 0);
+        titleText.setAttribute('y', currentY - 45); // Shift title 45px up
+    }
+
+    // Mathematically push the text outwards.
+    // We intentionally do NOT pre-expand the viewBox here. After labels are
+    // inserted, we measure the real visible bounds and tighten the viewBox.
+    sliceTexts.forEach((sliceText, index) => {
+        if (!labels[index]) return;
+        
+        let x = 0, y = 0;
+        const transform = sliceText.getAttribute('transform');
+        if (transform) {
+            const match = transform.match(/translate\(\s*([-\d.]+)[,\s]+([-\d.]+)\s*\)/);
+            if (match) { x = parseFloat(match[1]); y = parseFloat(match[2]); }
+        } else {
+            x = parseFloat(sliceText.getAttribute('x')) || 0;
+            y = parseFloat(sliceText.getAttribute('y')) || 0;
+        }
+        
+        if (x === 0 && y === 0) return; // Failsafe
+
+        // The text is positioned exactly at 60% of the radius (because we set textPosition: 0.6).
+        // By measuring the distance of the text from the center (0,0), we can calculate the exact pie edge!
+        const textDist = Math.hypot(x, y);
+        const radius = textDist / 0.6; 
+        
+        const angle = Math.atan2(y, x);
+        const targetRadius = radius + 45; // Push 45px outside the pie edge
+
+        
+        const labelX = Math.cos(angle) * targetRadius;
+        const labelY = Math.sin(angle) * targetRadius;
+
+        // Draw the connector line (SketchEngine will automatically turn this into a sketchy line!)
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', Math.cos(angle) * (radius + 2));
+        line.setAttribute('y1', Math.sin(angle) * (radius + 2));
+        line.setAttribute('x2', Math.cos(angle) * (targetRadius - 5));
+        line.setAttribute('y2', Math.sin(angle) * (targetRadius - 5));
+        line.setAttribute('stroke', ThemeConfig.forceStroke ? ThemeConfig.strokeColor : '#666');
+        line.setAttribute('stroke-width', '1.5');
+        sliceText.parentNode.appendChild(line);
+
+        // Inject the label Text
+        const labelNode = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        labelNode.textContent = labels[index];
+        labelNode.setAttribute('x', labelX);
+        labelNode.setAttribute('y', labelY);
+        labelNode.setAttribute('dominant-baseline', 'middle');
+        labelNode.setAttribute('text-anchor', Math.cos(angle) > 0 ? 'start' : 'end');
+        
+        // Use generic class so it inherits handwriting fonts & black-fill with white-halo styling
+        labelNode.setAttribute('class', 'pie-label-text');
+        sliceText.parentNode.appendChild(labelNode);
+    });
+
+    // Mermaid's original pie viewBox includes the legend area. Since we removed
+    // the legend, re-fit to the actual visible content so AutoFit centers the
+    // pie + outside labels instead of centering a stale legend-sized canvas.
+    SvgViewBoxUtil.tightenToVisibleContent(svgEl, {
+      padding: 30,
+      extraTop: 8,
+      extraBottom: 8,
+    });
+  }
+};
+
+
+/* =============================================================
+ *  MODULE 4.6 — XYCHART LABEL ENGINE
+ * ============================================================= */
+const XYChartLabelEngine = {
+  process(svgEl) {
+    // Detect xychart by aria role or class
+    const svgCls  = (svgEl.getAttribute('class') || '').toLowerCase();
+    const svgRole = (svgEl.getAttribute('aria-roledescription') || '').toLowerCase();
+    const isXY = /xychart/i.test(svgCls) || /xychart/i.test(svgRole)
+              || !!svgEl.querySelector('[class*="xychart"]')
+              || !!svgEl.querySelector('[class*="xyChart"]');
+    if (!isXY) return;
+
+    // Find x-axis tick label texts
+    // Mermaid renders them inside a group with class containing "x-axis" or "xAxis"
+    // Fallback: find the lowest group of text elements
+    let labelTexts = Array.from(svgEl.querySelectorAll(
+      '[class*="x-axis"] text, [class*="xAxis"] text, [class*="xaxis"] text, .xAxisLabels text'
+    ));
+
+    // Broader fallback: all text not in title/y-axis groups
+    if (labelTexts.length === 0) {
+      // Try to find tick label texts by position:
+      // X-axis labels sit at the bottom of the chart, all at approximately the same Y
+      const allTexts = Array.from(svgEl.querySelectorAll('text'));
+      // Filter out title (usually only 1 text at top) and y-axis labels (usually on left edge)
+      // Group texts by their Y coordinate bucket
+      const yGroups = {};
+      allTexts.forEach(t => {
+        try {
+          const bb = t.getBoundingClientRect();
+          const bucket = Math.round(bb.top / 10) * 10;
+          if (!yGroups[bucket]) yGroups[bucket] = [];
+          yGroups[bucket].push(t);
+        } catch(e) {}
+      });
+      // The x-axis label row is likely the largest group near the bottom
+      const sorted = Object.entries(yGroups).sort((a,b) => b[1].length - a[1].length);
+      if (sorted.length > 0 && sorted[0][1].length > 1) {
+        labelTexts = sorted[0][1];
+      }
+    }
+
+    if (labelTexts.length < 2) return;
+
+    // Determine rotation: forced or auto
+    const forcedAngle = ThemeConfig.xychartLabelAngle; // 0 = auto
+    let angle = forcedAngle;
+
+    if (angle === 0) {
+      // Auto-detect: check if any adjacent labels would overlap
+      angle = this._detectOverlap(labelTexts) ? 45 : 0;
+    }
+
+    if (angle === 0) return; // No rotation needed
+
+    // Apply rotation transform to each label
+    labelTexts.forEach(t => {
+      try {
+        const bb = t.getBBox();
+        const cx = bb.x + bb.width / 2;
+        const existing = t.getAttribute('transform') || '';
+        // Hinge at the top-center of the text (where it meets the tick mark)
+        const anchorX = cx;
+        const anchorY = bb.y;
+        t.setAttribute('transform',
+          `${existing} rotate(${angle}, ${anchorX}, ${anchorY})`
+        );
+        // Positive (\): swings down-right → anchor start
+        // Negative (/): swings up-left   → anchor end
+        t.setAttribute('text-anchor', angle > 0 ? 'start' : 'end');
+      } catch(e) {}
+    });
+
+    // After rotation, tighten around the actual transformed content.
+    // This replaces the previous guessed left-padding logic, which caused
+    // excessive empty space for negative "/" label angles.
+    this._expandViewBoxForRotatedLabels(svgEl, labelTexts, angle);
+  },
+
+  _detectOverlap(texts) {
+    // Compare bounding boxes of adjacent texts; if any overlap horizontally, rotate
+    const boxes = texts.map(t => {
+      try { return t.getBoundingClientRect(); } catch(e) { return null; }
+    }).filter(Boolean);
+
+    for (let i = 0; i < boxes.length - 1; i++) {
+      const a = boxes[i], b = boxes[i+1];
+      // Overlap if right edge of A exceeds left edge of B (with small tolerance)
+      if (a.right > b.left - 4) return true;
+    }
+    return false;
+  },
+
+  _expandViewBoxForRotatedLabels(svgEl, labelTexts, angle) {
+    // Measurement-based tightening is more reliable than estimating from the
+    // longest label. It includes the actual rotation transform, avoids fake
+    // left padding for "/" angles, and still prevents clipping.
+    SvgViewBoxUtil.tightenToVisibleContent(svgEl, {
+      padding: 26,
+      extraBottom: 8,
+    });
+  },
+};
+
+/* =============================================================
+ *  MODULE 5 — MERMAID BRIDGE  (Render + theme hand-off)
+ * ============================================================= */
+const MermaidBridge = {
+  _counter: 0,
+  _ready: false,
+
+  init() {
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: ThemeConfig.mermaidTheme || 'default',
+      pie: { textPosition: ThemeConfig.pieLabelsOutside ? 0.6 : 0.5 },
+      securityLevel: 'loose',
+      fontFamily: ThemeConfig.handFont ? ThemeConfig.fontFamily : "'DM Sans', sans-serif",
+      flowchart:  { curve: 'basis' },
+      sequence:   { mirrorActors: false },
+      themeVariables: ThemeConfig.mermaidTheme === 'base' ? {
+        // Clean base theme variables — minimal color interference
+        primaryColor:       '#ffffff',
+        primaryBorderColor: '#333333',
+        primaryTextColor:   '#111111',
+        secondaryColor:     '#ffffff',
+        tertiaryColor:      '#ffffff',
+        lineColor:          '#333333',
+        textColor:          '#111111',
+        edgeLabelBackground:'#ffffff',
+        clusterBkg:         '#fafafa',
+        clusterBorder:      '#aaaaaa',
+      } : undefined,
+    });
+    this._ready = true;
+  },
+
+  /** Re-initialize mermaid (call when theme changes). */
+  reinit() {
+    this._ready = false;
+    this._counter = 0; // Reset ID counter to avoid stale element IDs
+    this.init();
+  },
+
+  async render(code, container) {
+    if (!this._ready) this.init();
+    const id = `sketch-mmd-${++this._counter}`;
+    container.innerHTML = '';
+
+    try {
+      const { svg } = await mermaid.render(id, code.trim());
+      container.innerHTML = svg;
+      const svgEl = container.querySelector('svg');
+      if (svgEl) {
+        // Preserve intrinsic size for auto-fit calculations
+        svgEl.style.maxWidth = '100%';
+        svgEl.removeAttribute('height');
+
+        // Allow text and sketch elements to paint outside the tight mermaid viewBox
+        svgEl.setAttribute('overflow', 'visible');
+        svgEl.style.overflow = 'visible';
+
+        PieLabelEngine.process(svgEl);
+        XYChartLabelEngine.process(svgEl);
+      }
+      return svgEl;
+    } catch (err) {
+      container.innerHTML = `<div style="color:#e74c3c;font-family:var(--font-mono);font-size:13px;padding:20px;white-space:pre-wrap;">Mermaid Error:\n${err.message || err}</div>`;
+      return null;
+    }
+  },
+};
+
+
+/* =============================================================
+ *  MODULE 6 — PLAYGROUND UI CONTROLLER
+ * ============================================================= */
+const Playground = {
+
+  els: {},    // Cached DOM references
+
+  init() {
+    this._cacheDOM();
+    this._buildPresets();
+    this._buildPalette();
+    this._buildFillStyleChips();
+    this._buildTextureChips();
+    this._bindTabs();
+    this._bindControls();
+    this._bindActions();
+
+    // Load first preset
+    const first = Object.keys(Presets)[0];
+    this._selectPreset(first);
+
+    // Auto-fit enabled by default — activate visuals + observer after first render
+    requestAnimationFrame(() => {
+      const fitBtn = document.getElementById('btn-fit-toggle');
+      AutoFit.toggle(true, this.els.target, this.els.canvas);
+      if (fitBtn) fitBtn.classList.add('btn-primary');
+    });
+  },
+
+  /* ── DOM Cache ───────────────────────────────────────────── */
+  _cacheDOM() {
+    this.els = {
+      input:        document.getElementById('mermaid-input'),
+      target:       document.getElementById('render-target'),
+      status:       document.getElementById('canvas-status'),
+      canvas:       document.getElementById('canvas-area'),
+      presetGrid:   document.getElementById('preset-grid'),
+      paletteRow:   document.getElementById('palette-preview'),
+      fillChips:    document.getElementById('fill-style-chips'),
+      outTexChips:  document.getElementById('outline-tex-chips'),
+      hatTexChips:  document.getElementById('hatch-tex-chips'),
+      ghostTexChips:document.getElementById('ghost-tex-chips'),
+      fontSelect:   document.getElementById('select-font'),
+      mermaidTheme:  document.getElementById('mermaid-theme-select'),
+      colorStroke:   document.getElementById('color-stroke'),
+      paletteSelect: document.getElementById('palette-select'),
+    };
+  },
+
+  /* ── Presets ─────────────────────────────────────────────── */
+  _buildPresets() {
+    Object.keys(Presets).forEach(name => {
+      const chip = document.createElement('button');
+      chip.className = 'preset-chip';
+      chip.textContent = name;
+      chip.addEventListener('click', () => this._selectPreset(name));
+      this.els.presetGrid.appendChild(chip);
+    });
+  },
+
+  _selectPreset(name) {
+    this.els.presetGrid.querySelectorAll('.preset-chip')
+      .forEach(c => c.classList.toggle('active', c.textContent === name));
+    this.els.input.value = Presets[name];
+    this._render();
+  },
+
+  /* ── Palette Preview ─────────────────────────────────────── */
+  _buildPalette() {
+    const row = this.els.paletteRow;
+    const sel  = document.getElementById('palette-select');
+    if (sel) {
+      sel.value = Palettes._active;
+      // Only wire the listener once
+      if (!sel._wired) {
+        sel._wired = true;
+        sel.addEventListener('change', e => {
+          Palettes._active = e.target.value;
+          this._buildPalette();
+          this._render();
+        });
+      }
+    }
+    row.innerHTML = '';
+    const colors = Palettes[Palettes._active] || [];
+    colors.forEach(c => {
+      const sw = document.createElement('div');
+      sw.className = 'palette-swatch';
+      sw.style.background = c;
+      sw.title = c;
+      row.appendChild(sw);
+    });
+  },
+
+  /* ── Fill Style Chips ────────────────────────────────────── */
+  _buildFillStyleChips() {
+    const styles = ['hachure', 'cross-hatch', 'zigzag', 'dots'];
+    const container = this.els.fillChips;
+    styles.forEach(s => {
+      const chip = document.createElement('button');
+      chip.className = 'preset-chip' + (s === ThemeConfig.fillStyle ? ' active' : '');
+      chip.textContent = s;
+      chip.style.fontSize = '11px';
+      chip.style.padding = '5px 8px';
+      chip.addEventListener('click', () => {
+        ThemeConfig.fillStyle = s;
+        container.querySelectorAll('.preset-chip').forEach(c =>
+          c.classList.toggle('active', c.textContent === s));
+        this._render();
+      });
+      container.appendChild(chip);
+    });
+  },
+
+  /* ── Texture Chips (ballpen / pencil) ────────────────────── */
+  _buildTextureChips() {
+    const tex = ['ballpen', 'pencil'];
+
+    const make = (container, key) => {
+      tex.forEach(t => {
+        const chip = document.createElement('button');
+        chip.className = 'preset-chip' + (t === ThemeConfig[key] ? ' active' : '');
+        chip.textContent = t;
+        chip.style.fontSize = '11px';
+        chip.style.padding = '5px 8px';
+        chip.addEventListener('click', () => {
+          ThemeConfig[key] = t;
+          container.querySelectorAll('.preset-chip').forEach(c =>
+            c.classList.toggle('active', c.textContent === t));
+          this._render();
+        });
+        container.appendChild(chip);
+      });
+    };
+    make(this.els.outTexChips, 'outlineTex');
+    make(this.els.hatTexChips, 'hatchTex');
+    if (this.els.ghostTexChips) make(this.els.ghostTexChips, 'ghostTex');
+  },
+
+  /* ── Tabs ────────────────────────────────────────────────── */
+  _bindTabs() {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => this._activateTab(btn.dataset.tab));
+    });
+  },
+
+  _activateTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.tab === tab));
+    document.querySelectorAll('.tab-panel').forEach(p =>
+      p.classList.toggle('active', p.id === `panel-${tab}`));
+  },
+
+  /* ── Controls Binding ────────────────────────────────────── */
+  _bindControls() {
+    // Toggles
+    const toggleMap = {
+      'toggle-enabled':     'enabled',
+      'toggle-font':        'handFont',
+      'toggle-ghost':       'ghostLines',
+      'toggle-hachure':     'hachure',
+      'toggle-autocolor':   'autoColor',
+      'toggle-bleed':       'bleed',
+      'toggle-forceStroke': 'forceStroke',
+      'toggle-pieLabels':   'pieLabelsOutside',
+    };
+    Object.entries(toggleMap).forEach(([id, key]) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.toggle('on', ThemeConfig[key]);
+      el.addEventListener('click', () => {
+        ThemeConfig[key] = !ThemeConfig[key];
+        el.classList.toggle('on', ThemeConfig[key]);
+        
+        if (key === 'pieLabelsOutside') { MermaidBridge.reinit(); }
+        
+        this._render();
+      });
+    });
+
+    // Sliders
+    const sliderMap = {
+      'slider-outRoughness': 'outRoughness',
+      'slider-outBowing':    'outBowing',
+      'slider-strokeWidth':  'strokeWidth',
+      'slider-wobbleAmp':    'outWobbleAmp',
+      'slider-wobbleFreq':   'outWobbleFreq',
+      'slider-outGrain':     'outGrain',
+      'slider-outBlur':      'outBlur',
+      'slider-hatRoughness': 'hatRoughness',
+      'slider-hatBowing':    'hatBowing',
+      'slider-hachureGap':   'hachureGap',
+      'slider-fillWeight':   'fillWeight',
+      'slider-hachureAngle': 'hachureAngle',
+      'slider-fillOpacity':  'fillOpacity',
+      'slider-fillJitter':   'fillJitter',
+      'slider-bleed':        'bleedAmount',
+      'slider-edgeJitter':   'edgeJitter',
+      'slider-hatGrain':     'hatGrain',
+      'slider-hatBlur':      'hatBlur',
+      'slider-ghostCount':   'ghostCount',
+      'slider-ghostRoughness':'ghostRoughness',
+      'slider-ghostBowing':  'ghostBowing',
+      'slider-ghostWidth':   'ghostWidth',
+      'slider-ghostOpacity': 'ghostOpacity',
+      'slider-ghostOffset':  'ghostOffset',
+      'slider-ghostGrain':   'ghostGrain',
+      'slider-ghostBlur':    'ghostBlur',
+      'slider-fontScale':    'fontScale',
+    };
+    Object.entries(sliderMap).forEach(([id, key]) => {
+      const slider = document.getElementById(id);
+      if (!slider) return;
+      const valEl  = document.getElementById(id.replace('slider-', 'val-'));
+      slider.value = ThemeConfig[key];
+      const fmt = v => {
+        const step = slider.step || '1';
+        const decimals = step.includes('.') ? step.split('.')[1].length : 0;
+        return parseFloat(v).toFixed(decimals);
+      };
+      if (valEl) valEl.textContent = fmt(ThemeConfig[key]);
+      slider.addEventListener('input', () => {
+        ThemeConfig[key] = parseFloat(slider.value);
+        if (valEl) valEl.textContent = fmt(slider.value);
+      });
+      slider.addEventListener('change', () => this._render());
+    });
+
+    // Font selector
+    if (this.els.fontSelect) {
+      this.els.fontSelect.value = ThemeConfig.fontFamily;
+      this.els.fontSelect.addEventListener('change', e => {
+        ThemeConfig.fontFamily = e.target.value;
+        MermaidBridge.reinit();
+        this._render();
+      });
+    }
+
+    // Mermaid theme selector
+    if (this.els.mermaidTheme) {
+      // Sync select to ThemeConfig default (may differ from HTML default)
+      this.els.mermaidTheme.value = ThemeConfig.mermaidTheme;
+      this.els.mermaidTheme.addEventListener('change', e => {
+        ThemeConfig.mermaidTheme = e.target.value;
+        MermaidBridge.reinit();
+        this._render();
+      });
+    }
+
+    // XY chart label angle
+    const xyAngleSel = document.getElementById('xychart-label-angle');
+    if (xyAngleSel) {
+      xyAngleSel.value = String(ThemeConfig.xychartLabelAngle);
+      xyAngleSel.addEventListener('change', e => {
+        ThemeConfig.xychartLabelAngle = parseInt(e.target.value, 10);
+        this._render();
+      });
+    }
+
+    // forceStroke toggle — sync initial visual state
+    const fsToggle = document.getElementById('toggle-forceStroke');
+    if (fsToggle) {
+      fsToggle.classList.toggle('on', ThemeConfig.forceStroke);
+    }
+
+    // Stroke color — sync initial value from ThemeConfig
+    if (this.els.colorStroke) {
+      this.els.colorStroke.value = ThemeConfig.strokeColor;
+      this.els.colorStroke.addEventListener('input', e => {
+        ThemeConfig.strokeColor = e.target.value;
+      });
+      this.els.colorStroke.addEventListener('change', () => this._render());
+    }
+  },
+
+  /* ── Actions ─────────────────────────────────────────────── */
+  _bindActions() {
+    document.getElementById('btn-render').addEventListener('click', () => this._render());
+    document.getElementById('btn-clear').addEventListener('click', () => {
+      this.els.input.value = '';
+      this.els.target.innerHTML = '';
+    });
+
+    // Ctrl+Enter to render
+    this.els.input.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        this._render();
+      }
+    });
+
+    // Export SVG
+    document.getElementById('btn-export-svg').addEventListener('click', () => {
+      const svg = this.els.target.querySelector('svg');
+      if (!svg) return;
+      const blob = new Blob([svg.outerHTML], { type: 'image/svg+xml' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'sketch-diagram.svg';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+
+    // BG toggle
+    const bgCycle = ['bg-paper', 'bg-white', 'bg-dark'];
+    let bgIdx = 0;
+    document.getElementById('btn-bg-toggle').addEventListener('click', () => {
+      this.els.canvas.classList.remove(bgCycle[bgIdx]);
+      bgIdx = (bgIdx + 1) % bgCycle.length;
+      this.els.canvas.classList.add(bgCycle[bgIdx]);
+    });
+
+    // Auto-fit toggle
+    const fitBtn = document.getElementById('btn-fit-toggle');
+    fitBtn.addEventListener('click', () => {
+      const nowOn = !AutoFit.enabled;
+      AutoFit.toggle(nowOn, this.els.target, this.els.canvas);
+      fitBtn.classList.toggle('btn-primary', nowOn);
+    });
+  },
+
+  /* ── Render Pipeline ─────────────────────────────────────── */
+  _renderTimer: null,
+
+  async _render() {
+    clearTimeout(this._renderTimer);
+    this._renderTimer = setTimeout(async () => {
+      const code = this.els.input.value.trim();
+      if (!code) return;
+      this._showStatus('Rendering…');
+      const svgEl = await MermaidBridge.render(code, this.els.target);
+      
+      if (svgEl && ThemeConfig.enabled) {
+        // 1. Calculate target display scale BEFORE applying effects
+        const targetScale = AutoFit.calculateScale(svgEl, this.els.canvas);
+        // 2. Pass scale to SketchEngine so it compensates all pixel values
+        await new Promise(r => requestAnimationFrame(r));
+        SketchEngine.process(svgEl, targetScale);
+      }
+      
+      // 3. Apply auto-fit transform last
+      requestAnimationFrame(() => AutoFit.apply(this.els.target, this.els.canvas));
+      this._showStatus('Done ✓');
+      setTimeout(() => this._hideStatus(), 1200);
+    }, 80);
+  },
+
+  _showStatus(msg) {
+    this.els.status.textContent = msg;
+    this.els.status.classList.add('visible');
+  },
+  _hideStatus() {
+    this.els.status.classList.remove('visible');
+  },
+};
+
+
+/* =============================================================
+ *  MODULE 7 — AUTO-FIT
+ * ============================================================= */
+const AutoFit = {
+  enabled: true,
+  _ro: null,
+
+  /** Calculate the fit scale factor without applying transforms */
+  calculateScale(svgEl, canvas) {
+    if (!svgEl || !canvas) return 1;
+    const vb = svgEl.viewBox?.baseVal;
+    let natW = 0, natH = 0;
+    if (vb && vb.width > 0 && vb.height > 0) {
+      natW = vb.width; natH = vb.height;
+    } else {
+      try { const bb = svgEl.getBBox(); natW = bb.width; natH = bb.height; } catch(_) {}
+    }
+    if (!(natW > 0) || !(natH > 0)) return 1;
+    const margin = 16;
+    const availW = Math.max(1, canvas.clientWidth - margin * 2);
+    const availH = Math.max(1, canvas.clientHeight - margin * 2);
+    return Math.min(availW / natW, availH / natH);
+  },
+
+  toggle(on, target, canvas) {
+    this.enabled = on;
+    if (on) {
+      canvas.classList.add('fit-active');
+      target.classList.add('fit-mode');
+      this._observe(target, canvas);
+      this.apply(target, canvas);
+    } else {
+      canvas.classList.remove('fit-active');
+      target.classList.remove('fit-mode');
+      target.style.transform = '';
+      target.style.transformOrigin = '';
+      // Clear forced inline sizing so the SVG returns to its CSS-controlled size
+      const svg = target.querySelector('svg');
+      if (svg) {
+        svg.style.width = '';
+        svg.style.height = '';
+      }
+      if (this._ro) { this._ro.disconnect(); this._ro = null; }
+    }
+  },
+
+  _observe(target, canvas) {
+    if (this._ro) this._ro.disconnect();
+    let raf = null;
+    this._ro = new ResizeObserver(() => {
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => { raf = null; this.apply(target, canvas); });
+    });
+    this._ro.observe(canvas);
+  },
+
+  apply(target, canvas) {
+    if (!this.enabled) return;
+    const svg = target.querySelector('svg');
+    if (!svg) return;
+
+    // Reset any prior transform so we measure the true natural size
+    target.style.transform = 'none';
+    target.style.transformOrigin = 'center center';
+
+    // ── Resolve the SVG's intrinsic size from its viewBox (truth-source) ──
+    // The viewBox tells us the diagram's real dimensions, free of any
+    // CSS constraints (max-width:100%, height:auto) that distort measurement.
+    let natW = 0, natH = 0;
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    if (vb && vb.width > 0 && vb.height > 0) {
+      natW = vb.width;
+      natH = vb.height;
+    } else {
+      // Fallback: getBBox gives the bounding box of rendered content
+      try {
+        const bb = svg.getBBox();
+        natW = bb.width;
+        natH = bb.height;
+      } catch (_) {}
+      if (!(natW > 0) || !(natH > 0)) {
+        // Last-resort fallback: layout box
+        const r = svg.getBoundingClientRect();
+        natW = r.width; natH = r.height;
+      }
+    }
+    if (!(natW > 0) || !(natH > 0)) return;
+
+    // Normalize SVG origin to actual rendered content bounds.
+    // This fixes stale whitespace after legend removal / label rotation.
+    //
+    // IMPORTANT:
+    // Some Mermaid diagrams (especially sequence + gantt) contain
+    // structural geometry outside the visible content area.
+    // Tight reboxing breaks their layout or causes excessive zoom-out.
+    //
+    // Therefore we only apply bbox normalization to "safe" diagrams.
+    try {
+      const role = (svg.getAttribute('aria-roledescription') || '').toLowerCase();
+      const cls  = (svg.getAttribute('class') || '').toLowerCase();
+
+      const isSequence =
+        role.includes('sequence') ||
+        cls.includes('sequence');
+
+      const isGantt =
+        role.includes('gantt') ||
+        cls.includes('gantt') ||
+        !!svg.querySelector('.task, [class*="task"]');
+
+      const allowTightBBox = !isSequence && !isGantt;
+
+      if (allowTightBBox) {
+        const bb = svg.getBBox();
+
+        const valid =
+          Number.isFinite(bb.x) &&
+          Number.isFinite(bb.y) &&
+          Number.isFinite(bb.width) &&
+          Number.isFinite(bb.height) &&
+          bb.width > 0 &&
+          bb.height > 0;
+
+        if (valid) {
+          svg.setAttribute(
+            'viewBox',
+            `${bb.x} ${bb.y} ${bb.width} ${bb.height}`
+          );
+
+          natW = bb.width;
+          natH = bb.height;
+        }
+      }
+    } catch (_) {}
+
+    svg.setAttribute('width', natW);
+    svg.setAttribute('height', natH);
+    svg.style.width = natW + 'px';
+    svg.style.height = natH + 'px';
+
+    // ── Available viewport (small uniform safety margin) ──
+    const margin = 16; // visual breathing room on each side
+    const availW = Math.max(0, canvas.clientWidth  - margin * 2);
+    const availH = Math.max(0, canvas.clientHeight - margin * 2);
+    if (availW === 0 || availH === 0) return;
+
+    // ── Exact fit: scale so the larger axis touches the viewport edge ──
+    // min(scaleX, scaleY) guarantees nothing is cropped; no upper cap so
+    // small diagrams expand to use the viewport efficiently.
+    const scale = Math.min(availW / natW, availH / natH);
+
+    if (isFinite(scale) && scale > 0) {
+      target.style.transform = `scale(${scale.toFixed(5)})`;
+    }
+  },
+};
+
+/* =============================================================
+ *  INIT
+ * ============================================================= */
+document.addEventListener('DOMContentLoaded', () => {
+  MermaidBridge.init();
+  Playground.init();
+});
+</script>
+</body>
+</html>
