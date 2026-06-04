@@ -1,0 +1,17 @@
+{
+  "name": "journal-warm",
+  "version": 1,
+  "description": "Warm-tone journal aesthetic with soft brown ink",
+  "extends": "_base",
+  "paper": {
+    "background": "#f5f0e8",
+    "lineColor": "#dcc9b8",
+    "marginColor": "#c9a9a0"
+  },
+  "sketch": {
+    "palette": "coloredPencil",
+    "seed": 77,
+    "roughness": 1.2,
+    "ghostEnabled": false
+  }
+}

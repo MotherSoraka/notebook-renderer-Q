@@ -1,0 +1,440 @@
+<!-- File: /Paper-Renderer-C.html -->
+<!-- Summary: Advanced bullet-proof notebook renderer. Fetches external Markdown, features SSoT CSS variables, semantic multi-color ink, native auto-RTL, and realistic paper textures. -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ultimate Notebook Renderer</title>
+
+    <!-- Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Caveat:wght@400;600&family=Fira+Code:wght@400&family=Noto+Sans+JP:wght@400&display=swap" rel="stylesheet">
+    
+    <!-- Dependencies: KaTeX, Marked.js, Mermaid v11 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.0.0/dist/mermaid.esm.min.mjs';
+        // Aim: Native Hand-drawn look using multi-color ballpoint pen palette
+        mermaid.initialize({ 
+            startOnLoad: false, 
+            theme: 'base',
+            themeVariables: {
+                background: 'transparent',
+                fontFamily: "'Caveat', 'Amiri', cursive",
+                primaryColor: 'rgba(0, 0, 128, 0.05)', // Blue ink wash
+                primaryBorderColor: '#000080', // Blue ink
+                lineColor: '#000080',
+                textColor: '#222222', // Black ink
+                tertiaryColor: 'rgba(0, 102, 0, 0.05)', // Green wash
+                tertiaryBorderColor: '#006600', // Green ink
+                noteBkgColor: 'rgba(179, 0, 0, 0.05)', // Red wash
+                noteBorderColor: '#b30000', // Red ink
+                noteTextColor: '#222222',
+                actorBkg: 'rgba(0, 0, 128, 0.05)',
+                actorBorder: '#000080',
+                actorTextColor: '#222222',
+                actorLineColor: '#000080',
+                signalColor: '#b30000',
+                signalTextColor: '#222222',
+                pie1: 'rgba(0, 0, 128, 0.7)',   // Blue
+                pie2: 'rgba(179, 0, 0, 0.7)',   // Red
+                pie3: 'rgba(0, 102, 0, 0.7)',   // Green
+                pie4: 'rgba(34, 34, 34, 0.7)',  // Black
+                pieStrokeColor: '#000080',
+                pieStrokeWidth: '2px'
+            },
+            xyChart: {
+                backgroundColor: "transparent",
+                plotColorPalette: "rgba(0, 0, 128, 0.7), rgba(179, 0, 0, 0.7), rgba(0, 102, 0, 0.7), rgba(34, 34, 34, 0.7)"
+            },
+            look: 'handDrawn' 
+        });
+        window.mermaid = mermaid; // Expose for the parser script
+    </script>
+
+    <style>
+        /* Centralized Design Tokens (SSoT) */
+        :root {
+            --grid: 32px;               
+            --font-size: 26px;
+            --offset: 6px;     
+            
+            --paper-bg: #fdf6e3;        
+            --line-color: #b5d8f6;      
+            --margin-color: #ff8c8c;    
+            --desk-color: #1a1a1a; 
+
+            --ink-blue: #000080;  
+            --ink-red: #b30000;   
+            --ink-green: #006600; 
+            --ink-black: #222222; 
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--desk-color);
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: sans-serif;
+        }
+
+        /* Control Panel UI */
+        .controls {
+            background: rgba(40, 40, 40, 0.95);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            position: sticky;
+            top: 20px;
+            z-index: 100;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 1px solid #555;
+        }
+        .control-group { display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+        .controls input[type="range"] { cursor: pointer; accent-color: #bae1ff; }
+
+        /* Realistic Paper Texture & Holes */
+        .paper {
+            width: 100%;
+            max-width: 900px;
+            background-color: var(--paper-bg);
+            position: relative;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            border-radius: 4px 12px 12px 4px;
+            
+            background-image: 
+                url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)" opacity="0.06"/%3E%3C/svg%3E'),
+                repeating-linear-gradient(
+                    to bottom,
+                    transparent,
+                    transparent calc(var(--grid) - 1px),
+                    var(--line-color) calc(var(--grid) - 1px),
+                    var(--line-color) var(--grid)
+                );
+            background-position: 0 0, 0 var(--offset);
+        }
+
+        .paper::before {
+            content: '';
+            position: absolute;
+            top: 0; bottom: 0; left: 80px;
+            width: 2px;
+            background-color: var(--margin-color);
+            z-index: 1;
+        }
+
+        .paper::after {
+            content: '';
+            position: absolute;
+            top: 0; bottom: 0; left: 15px;
+            width: 30px;
+            background-image: radial-gradient(circle at 15px 15px, var(--desk-color) 10px, transparent 11px);
+            background-size: 100% calc(var(--grid) * 3); 
+            background-position: 0 calc(var(--offset) + var(--grid));
+            z-index: 2;
+        }
+
+        /* Strict Typography Rules */
+        .content {
+            position: relative;
+            z-index: 3;
+            padding-left: 100px; 
+            padding-right: 40px;
+            padding-top: var(--offset); 
+            padding-bottom: 100px;
+            
+            /* Aim: Amiri as fallback ensures mixed Farsi/English text uses the correct font seamlessly */
+            font-family: 'Caveat', 'Amiri', cursive;
+            font-size: var(--font-size); 
+            color: var(--ink-blue); 
+        }
+
+        p, h1, h2, h3, ul, ol, blockquote, pre {
+            line-height: var(--grid);
+        }
+
+        /* Multi-Color Semantic Pen System */
+        strong, b { color: var(--ink-red); font-weight: 600; }
+        em, i { color: var(--ink-green); font-style: normal; }
+        code { color: var(--ink-black); font-family: 'Fira Code', monospace; font-size: 0.8em; }
+        del { text-decoration-color: var(--ink-red); text-decoration-thickness: 2px; }
+        a { color: var(--ink-blue); text-decoration-style: wavy; text-decoration-color: var(--ink-red); }
+
+        /* Task Lists / Checkboxes */
+        ul { list-style-type: none; }
+        ul li::before { content: "• "; color: var(--ink-red); font-weight: bold; }
+        ul.task-list li::before { content: none; }
+        
+        /* Specific override for marked.js task lists */
+        li:has(input[type="checkbox"])::before { content: none; }
+        
+        input[type="checkbox"] {
+            appearance: none;
+            width: 18px; height: 18px;
+            border: 2px solid var(--ink-blue);
+            border-radius: 4px;
+            margin-right: 10px;
+            position: relative;
+            vertical-align: middle;
+            cursor: pointer;
+        }
+        input[type="checkbox"]:checked::after {
+            content: '✓';
+            position: absolute;
+            top: -6px; left: 2px;
+            color: var(--ink-red);
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        h1 { font-size: calc(var(--font-size) * 1.6); color: var(--ink-black); }
+        h2 { font-size: calc(var(--font-size) * 1.3); color: var(--ink-black); }
+        h3 { font-size: calc(var(--font-size) * 1.1); color: var(--ink-black); }
+        
+        ul, ol { padding-left: 30px; }
+        ul ul, ol ol, ul ol, ol ul { padding-top: 0; margin-bottom: 0; } 
+        
+        blockquote {
+            border-left: 3px solid var(--ink-red);
+            padding-left: 15px;
+            color: var(--ink-black);
+            border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+        }
+
+        hr {
+            border: none;
+            border-bottom: 2px dashed var(--ink-red);
+            margin-bottom: var(--grid); 
+            height: var(--grid);
+        }
+
+        [dir="rtl"] {
+            text-align: right;
+        }
+        ul[dir="rtl"], ol[dir="rtl"] {
+            padding-right: 30px;
+            padding-left: 0;
+        }
+
+        /* Transparent Isolation Wrappers */
+        .grid-snap {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            margin-bottom: 0; 
+        }
+
+        .mermaid {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            padding: 10px;
+        }
+        .mermaid svg { width: 100% !important; max-width: 100%; height: auto !important; }
+
+        /* Hand-Drawn Tables */
+        table {
+            border-collapse: separate; 
+            border-spacing: 0;
+            width: 100%;
+            margin: 0 auto;
+            font-family: 'Caveat', 'Amiri', cursive;
+            font-size: calc(var(--font-size) * 0.9);
+            color: var(--ink-black);
+        }
+        
+        th, td { 
+            padding: 0 10px; 
+            text-align: left; 
+            /* Aim: Absorb the 3px border to ensure natural height remains under 1 grid line */
+            line-height: calc(var(--grid) - 4px); 
+            vertical-align: bottom;
+            border: 1.5px solid var(--ink-blue);
+            border-radius: 255px 15px 225px 15px/15px 225px 15px 255px; 
+        }
+        
+        th { font-weight: bold; }
+
+        .katex-display {
+            color: var(--ink-black);
+        }
+
+        pre {
+            font-family: 'Fira Code', monospace;
+            font-size: calc(var(--font-size) * 0.6);
+            background: rgba(0,0,0,0.03);
+            /* Aim: Top padding offsets the 2px border to perfectly align internal text to the grid */
+            padding: calc(var(--grid) - 2px) 20px 0 20px;
+            width: 100%;
+            border: 2px dashed var(--ink-blue);
+            border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+            color: var(--ink-black);
+            overflow-x: auto;
+        }
+        pre code {
+            /* Reset code inline styling for block context */
+            font-size: 1em;
+            color: inherit;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="controls">
+        <div class="control-group">
+            <label>Line Height (Grid): <span id="grid-val">32px</span></label>
+            <input type="range" id="grid-slider" min="20" max="60" value="32">
+        </div>
+        <div class="control-group">
+            <label>Font Size: <span id="font-val">26px</span></label>
+            <input type="range" id="font-slider" min="16" max="40" value="26">
+        </div>
+        <div class="control-group">
+            <label>Vertical Offset: <span id="offset-val">6px</span></label>
+            <input type="range" id="offset-slider" min="0" max="60" value="6">
+        </div>
+    </div>
+
+    <div class="paper">
+        <!-- Content will be injected here via Marked.js -->
+        <div class="content">
+            <p style="text-align: center;"><em>Loading sample.md... (Ensure you are running a local server to avoid CORS)</em></p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", async () => {
+            const root = document.documentElement;
+            const contentDiv = document.querySelector('.content');
+            
+            // Aim: Fetch and Parse External Markdown
+            try {
+                const res = await fetch('sample.md');
+                if (!res.ok) throw new Error("Could not load sample.md");
+                const text = await res.text();
+                
+                // Aim: WYSIWYG newlines (breaks: true) translates single enters to <br>
+                marked.use({ gfm: true, breaks: true });
+                contentDiv.innerHTML = marked.parse(text);
+
+                // Post-Process: Auto-RTL
+                // Aim: Only apply auto-dir to block elements to prevent inline flow breakage and enforce right-alignment
+                contentDiv.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, blockquote, td, th').forEach(el => el.setAttribute('dir', 'auto'));
+
+                // Post-Process: Mermaid Blocks
+                contentDiv.querySelectorAll('pre code.language-mermaid').forEach(block => {
+                    const pre = block.parentElement;
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'grid-snap';
+                    wrapper.innerHTML = `<div class="mermaid">${block.textContent}</div>`;
+                    pre.replaceWith(wrapper);
+                });
+
+                // Post-Process: KaTeX Math Blocks
+                contentDiv.querySelectorAll('pre code.language-math').forEach(block => {
+                    const pre = block.parentElement;
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'grid-snap math-block';
+                    wrapper.textContent = block.textContent;
+                    pre.replaceWith(wrapper);
+                });
+
+                // Render Math
+                document.querySelectorAll('.math-block').forEach(block => {
+                    katex.render(block.textContent, block, { displayMode: true, throwOnError: false });
+                });
+
+                // Render Mermaid (Wait for module to be ready)
+                if (window.mermaid) await window.mermaid.run({ querySelector: '.mermaid' });
+
+            } catch (err) {
+                contentDiv.innerHTML = `<p style="color: red;">Error: ${err.message}. Please run via a local server (e.g. VSCode Live Server).</p>`;
+            }
+
+            // Aim: Core Snapping Logic
+            const getGridSize = () => parseFloat(getComputedStyle(root).getPropertyValue('--grid'));
+
+            const snapElement = (el, currentGrid) => {
+                if (el.tagName === 'TR') {
+                    el.style.height = 'auto'; 
+                    const naturalHeight = el.getBoundingClientRect().height;
+                    const linesNeeded = Math.max(1, Math.ceil((naturalHeight - 4) / currentGrid));
+                    el.style.height = `${linesNeeded * currentGrid}px`;
+                } else {
+                    el.style.marginBottom = '0px'; 
+                    const naturalHeight = el.getBoundingClientRect().height;
+                    if (naturalHeight === 0) return;
+
+                    const linesNeeded = Math.ceil(naturalHeight / currentGrid);
+                    const targetHeight = linesNeeded * currentGrid;
+                    const driftCorrection = targetHeight - naturalHeight;
+                    
+                    // Aim: Smart spacing. Paragraphs/Blocks get a blank line, Headings sit tight.
+                    const tag = el.tagName.toLowerCase();
+                    const tightTags = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
+                    const extraMargin = tightTags.includes(tag) ? 0 : currentGrid;
+                    
+                    el.style.marginBottom = `${driftCorrection + extraMargin}px`;
+                }
+            };
+
+            const observer = new ResizeObserver(entries => {
+                window.requestAnimationFrame(() => {
+                    const currentGrid = getGridSize();
+                    for (let entry of entries) {
+                        snapElement(entry.target, currentGrid);
+                    }
+                });
+            });
+
+            // Start observing top level elements after render
+            const startObserving = () => {
+                const elementsToTrack = document.querySelectorAll('.content > *:not(style), tr');
+                elementsToTrack.forEach(el => observer.observe(el));
+            };
+            
+            // Allow a small delay for Mermaid to finish injecting SVG before first snap
+            setTimeout(startObserving, 300);
+
+            // Handle UI Sliders
+            const forceRecalculation = () => {
+                const currentGrid = getGridSize();
+                document.querySelectorAll('.content > *:not(style), tr').forEach(el => snapElement(el, currentGrid));
+            };
+
+            // Handle UI Sliders
+            document.getElementById('grid-slider').addEventListener('input', (e) => {
+                root.style.setProperty('--grid', `${e.target.value}px`);
+                document.getElementById('grid-val').textContent = `${e.target.value}px`;
+                forceRecalculation();
+            });
+
+            document.getElementById('font-slider').addEventListener('input', (e) => {
+                root.style.setProperty('--font-size', `${e.target.value}px`);
+                document.getElementById('font-val').textContent = `${e.target.value}px`;
+            });
+
+            document.getElementById('offset-slider').addEventListener('input', (e) => {
+                root.style.setProperty('--offset', `${e.target.value}px`);
+                document.getElementById('offset-val').textContent = `${e.target.value}px`;
+            });
+        });
+    </script>
+</body>
+</html>

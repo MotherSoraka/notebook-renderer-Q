@@ -1,0 +1,20 @@
+{
+  "name": "pencil-grid",
+  "version": 1,
+  "description": "Graphite pencil on grid paper - perfect for technical sketches",
+  "extends": "_base",
+  "paper": {
+    "background": "#faf8f5",
+    "lineColor": "#e0e0e0",
+    "marginColor": "#d0d0d0",
+    "gridSize": 24
+  },
+  "sketch": {
+    "palette": "pencil",
+    "seed": 123,
+    "roughness": 2.0,
+    "fillStyle": "hachure",
+    "hachureGap": 6,
+    "grainIntensity": 0.25
+  }
+}

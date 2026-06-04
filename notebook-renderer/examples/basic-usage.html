@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notebook Renderer - Basic Usage Example</title>
+  <style>
+    body {
+      background: #1a1a1a;
+      color: #cdd6f4;
+      font-family: system-ui, sans-serif;
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 { color: #89b4fa; margin-bottom: 10px; }
+    .example { 
+      background: #1e1e2e; 
+      border-radius: 8px; 
+      padding: 20px; 
+      margin: 20px 0;
+      border: 1px solid #313244;
+    }
+    .example h2 { color: #a6e3a1; font-size: 1.2em; margin-top: 0; }
+    .output { 
+      background: #fff; 
+      border-radius: 4px; 
+      padding: 20px; 
+      margin-top: 15px;
+      min-height: 200px;
+    }
+    button {
+      background: #89b4fa;
+      color: #1e1e2e;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      margin: 5px;
+    }
+    button:hover { background: #b4befe; }
+    .preset-selector {
+      margin: 15px 0;
+    }
+    select {
+      background: #313244;
+      color: #cdd6f4;
+      border: 1px solid #45475a;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+  </style>
+  
+  <!-- Dependencies -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Caveat:wght@400;600;700&family=Fira+Code:wght@400;500&family=Noto+Sans+JP:wght@400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.0.0/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, theme: 'default', look: 'handDrawn' });
+    window.mermaid = mermaid;
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.min.js"></script>
+</head>
+<body>
+  <h1>📓 Notebook Renderer - Basic Usage Examples</h1>
+  <p>Demonstrates how to use the core modules programmatically.</p>
+
+  <!-- Example 1: Simple Markdown -->
+  <div class="example">
+    <h2>Example 1: Simple Markdown Rendering</h2>
+    <button onclick="renderSimple()">Render</button>
+    <button onclick="changePreset('blue-bic')">Preset: blue-bic</button>
+    <button onclick="changePreset('pencil-grid')">Preset: pencil-grid</button>
+    <div id="output1" class="output"></div>
+  </div>
+
+  <!-- Example 2: Mermaid Diagram -->
+  <div class="example">
+    <h2>Example 2: Mermaid Diagram</h2>
+    <button onclick="renderMermaid()">Render Diagram</button>
+    <div id="output2" class="output"></div>
+  </div>
+
+  <!-- Example 3: Math Equations -->
+  <div class="example">
+    <h2>Example 3: Math Equations</h2>
+    <button onclick="renderMath()">Render Math</button>
+    <div id="output3" class="output"></div>
+  </div>
+
+  <!-- Example 4: Combined -->
+  <div class="example">
+    <h2>Example 4: Combined (Markdown + Mermaid + Math)</h2>
+    <button onclick="renderCombined()">Render All</button>
+    <div id="output4" class="output"></div>
+  </div>
+
+  <script type="module">
+    import { PaperRenderer, loadPreset } from '../core/index.js';
+
+    let renderer1, renderer2, renderer3, renderer4;
+    let currentPreset = 'blue-bic';
+
+    // Initialize renderers
+    function initRenderers() {
+      renderer1 = new PaperRenderer(document.getElementById('output1'), {
+        gridSize: 32,
+        fontSize: 26,
+        enableMermaid: true,
+        enableMath: true,
+      });
+
+      renderer2 = new PaperRenderer(document.getElementById('output2'), {
+        gridSize: 32,
+        fontSize: 26,
+        enableMermaid: true,
+      });
+
+      renderer3 = new PaperRenderer(document.getElementById('output3'), {
+        gridSize: 32,
+        fontSize: 26,
+        enableMath: true,
+      });
+
+      renderer4 = new PaperRenderer(document.getElementById('output4'), {
+        gridSize: 32,
+        fontSize: 26,
+        enableMermaid: true,
+        enableMath: true,
+      });
+    }
+
+    initRenderers();
+
+    // Example 1: Simple Markdown
+    window.renderSimple = async () => {
+      const markdown = `# Hello World
+
+This is a **simple example** of rendering Markdown onto notebook paper.
+
+## Features
+
+- Hand-drawn style
+- Multiple presets
+- Grid snapping
+
+> "Simplicity is the ultimate sophistication."
+`;
+      await renderer1.applyPreset(currentPreset);
+      await renderer1.renderMarkdown(markdown);
+    };
+
+    // Change preset
+    window.changePreset = (preset) => {
+      currentPreset = preset;
+      alert(`Preset changed to: ${preset}`);
+    };
+
+    // Example 2: Mermaid
+    window.renderMermaid = async () => {
+      const markdown = `# Flow Chart
+
+\`\`\`mermaid
+graph TD
+    A[Start] --> B{Decision}
+    B -->|Yes| C[Action 1]
+    B -->|No| D[Action 2]
+    C --> E[End]
+    D --> E
+\`\`\`
+`;
+      await renderer2.applyPreset(currentPreset);
+      await renderer2.renderMarkdown(markdown);
+    };
+
+    // Example 3: Math
+    window.renderMath = async () => {
+      const markdown = `# Physics Equations
+
+## Einstein's Mass-Energy Equivalence
+
+\`\`\`math
+E = mc^2
+\`\`\`
+
+## Schrödinger Equation
+
+\`\`\`math
+i\\hbar\\frac{\\partial}{\\partial t}\\psi = \\hat{H}\\psi
+\`\`\`
+
+## Maxwell's Equations
+
+\`\`\`math
+\\nabla \\cdot \\mathbf{E} = \\frac{\\rho}{\\varepsilon_0}
+\`\`\`
+`;
+      await renderer3.applyPreset(currentPreset);
+      await renderer3.renderMarkdown(markdown);
+    };
+
+    // Example 4: Combined
+    window.renderCombined = async () => {
+      const markdown = `# Project Plan
+
+## Overview
+
+This is a **combined example** with Markdown, Mermaid diagrams, and Math.
+
+## Architecture
+
+\`\`\`mermaid
+graph LR
+    A[User] --> B[Frontend]
+    B --> C[API]
+    C --> D[Database]
+\`\`\`
+
+## Performance Formula
+
+\`\`\`math
+\\text{Performance} = \\frac{\\text{Throughput}}{\\text{Latency}}
+\`\`\`
+
+## Next Steps
+
+1. Design phase
+2. Implementation
+3. Testing
+4. Deployment
+`;
+      await renderer4.applyPreset(currentPreset);
+      await renderer4.renderMarkdown(markdown);
+    };
+
+    // Auto-render on load
+    setTimeout(() => {
+      window.renderSimple();
+    }, 500);
+  </script>
+</body>
+</html>

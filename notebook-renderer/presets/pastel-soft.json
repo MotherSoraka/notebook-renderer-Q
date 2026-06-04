@@ -1,0 +1,18 @@
+{
+  "name": "pastel-soft",
+  "version": 1,
+  "description": "Soft pastel palette for gentle, calming notes",
+  "extends": "_base",
+  "paper": {
+    "background": "#fff9f0",
+    "lineColor": "#ffd6e8",
+    "marginColor": "#c4b5fd"
+  },
+  "sketch": {
+    "palette": "pastel",
+    "seed": 555,
+    "roughness": 1.0,
+    "ghostOpacity": 0.08,
+    "grainIntensity": 0.1
+  }
+}

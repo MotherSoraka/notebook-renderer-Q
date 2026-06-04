@@ -1,0 +1,15 @@
+{
+  "name": "blue-bic",
+  "version": 1,
+  "description": "Classic blue ballpen on ruled notebook paper - the default aesthetic",
+  "extends": "_base",
+  "paper": {
+    "background": "#fdf6e3",
+    "lineColor": "#b5d8f6",
+    "marginColor": "#ff8c8c"
+  },
+  "sketch": {
+    "palette": "ballpen",
+    "seed": 42
+  }
+}
